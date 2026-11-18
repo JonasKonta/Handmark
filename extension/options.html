@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handmark settings</title>
+<link rel="stylesheet" href="panel.css">
+<style>
+body{min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px;display:grid;gap:28px}
+h1{margin:0;font-size:26px;display:flex;align-items:center;gap:10px}
+h1 img{width:32px;height:32px;border-radius:7px}
+.card{background:#232220;border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:12px}
+.card h3{margin:0;font-size:15px}
+.card p{margin:0;color:var(--muted)}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--yellow)}
+.opt input{margin-top:3px;accent-color:var(--yellow)}
+.opt b{display:block}
+.opt span{color:var(--muted);font-size:12.5px}
+select{font:inherit;background:#2a2926;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input[type=search]{font:inherit;background:#2a2926;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:100%}
+.page{grid-template-columns:96px minmax(0,1fr)}
+.prev{width:96px;height:60px}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:6px}
+li b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><img src="icons/icon-128.png" alt="">Handmark settings</h1>
+
+  <div class="card">
+    <h3>Where the controls live</h3>
+    <label class="opt"><input type="radio" name="layout" value="side"><div><b>Side panel</b><span>Docked in Chrome’s side panel. Never covers the page, stays open across tabs, easy to crop out of a recording.</span></div></label>
+    <label class="opt"><input type="radio" name="layout" value="popup"><div><b>Pop-up from the toolbar icon</b><span>Click the Handmark icon to pick a tool. Chrome closes the pop-up when you click the page.</span></div></label>
+    <label class="opt"><input type="radio" name="layout" value="floating"><div><b>Floating on the page</b><span>A draggable bar on top of the page. Click its yellow handle or press F to turn drawing off.</span></div></label>
+  </div>
+
+  <div class="card">
+    <h3>Drawing</h3>
+    <label class="switch"><span>Fade time when fade is on</span><select id="fadeMs"><option value="3000">3 seconds</option><option value="5000">5 seconds</option><option value="8000">8 seconds</option></select></label>
+    <label class="switch"><span>Keep drawings on new pages by default</span><input type="checkbox" id="keepDefault"></label>
+    <div class="row"><button class="btn" id="shortcutsBtn" type="button">Change keyboard shortcut…</button></div>
+  </div>
+
+  <div class="card">
+    <h3>Show drawings automatically when I come back</h3>
+    <p>By default Handmark only touches a page after you click its icon or press the shortcut, and your drawings come back when you do. Turn this on to see them as soon as a page opens. Chrome will ask to let Handmark “read and change data on all websites”: Handmark only uses this to draw its own layer and never reads, changes or sends page content.</p>
+    <label class="switch"><span id="autoLabel">Off</span><input type="checkbox" id="auto"></label>
+  </div>
+
+  <div class="card">
+    <h3>Saved drawings</h3>
+    <input type="search" id="search" placeholder="Search saved pages" aria-label="Search saved pages">
+    <div id="saved"></div>
+    <div class="row">
+      <button class="btn" id="exportBtn" type="button">Export backup</button>
+      <button class="btn" id="importBtn" type="button">Import backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="btn" id="deleteAllBtn" type="button">Delete all drawings</button>
+    </div>
+    <div class="msg" id="dataMsg" role="status"></div>
+  </div>
+
+  <div class="card">
+    <h3>Privacy</h3>
+    <ul>
+      <li><b>Everything stays on this computer.</b> Drawings are kept in Chrome’s extension storage. Handmark has no server, no account, no analytics and makes no network requests.</li>
+      <li><b>Incognito windows are never saved.</b> If you allow Handmark in incognito, drawings there disappear when you close the tab.</li>
+      <li><b>Screenshots</b> go straight to your Downloads/Handmark folder.</li>
+      <li><b>Backups</b> are plain files you control. They contain the addresses and titles of pages you drew on.</li>
+    </ul>
+  </div>
+</div>
+<script src="common.js"></script>
+<script src="pages.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{"app":"handmark","version":1,"pages":[
+ {"url":"javascript:alert(1)","title":"x","strokes":[{"t":"pen","c":"#ff0000","w":4,"p":[1,1,0,5,5,10]}]},
+ {"url":"https://evil.example/a","title":"<img src=x onerror=alert(1)>","updated":1,"strokes":[
+   {"t":"pen","c":"red","w":4,"p":[1,1,0,5,5,10]},
+   {"t":"pen","c":"#00ff00","w":4,"p":[1,1,0,1e999,5,10]},
+   {"t":"text","c":"#00ff00","x":10,"y":10,"fs":20,"v":"<script>alert(1)</script>"},
+   {"t":"brush","c":"#00FF00","w":4,"p":[1,1,0,50,50,10],"__proto__":{"polluted":1},"extra":"drop me"}]},
+ {"url":"https://ok.example/b?utm_source=x","title":"ok","strokes":[{"t":"arrow","c":"#FFC702","w":7,"p":[10,10,0,100,100,50]}]},
+ {"__proto__":{"polluted":true},"url":"https://proto.example/","strokes":[{"t":"pen","c":"#FFFFFF","w":4,"p":[1,1,0,2,2,5]}]}
+]}

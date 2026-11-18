@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handmark</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body data-mode="popup">
+<header>
+  <img src="icons/icon-32.png" alt="">
+  <b>Handmark</b>
+  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings"></button>
+</header>
+<main>
+  <section class="status" id="status" aria-live="polite">
+    <div class="where" id="where">Checking this page…</div>
+    <div class="sub" id="sub"></div>
+    <div class="row">
+      <button class="btn primary" id="startBtn" type="button" hidden>Start drawing here</button>
+      <button class="btn" id="drawBtn" type="button" hidden>Turn drawing off</button>
+    </div>
+    <div class="warn" id="widthWarn" hidden>
+      <div id="widthMsg"></div>
+      <div class="row"><button class="btn primary" id="matchBtn" type="button">Match width</button></div>
+    </div>
+    <label class="switch" id="keepRow" hidden><span>Keep drawings on this page</span><input type="checkbox" id="keep"></label>
+  </section>
+  <section><h2 hidden>Controls</h2><div id="controls"></div></section>
+  <section id="savedSec">
+    <h2>Saved pages</h2>
+    <div id="saved"></div>
+    <div class="row">
+      <button class="btn" id="exportBtn" type="button">Export</button>
+      <button class="btn" id="importBtn" type="button">Import</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+    <div class="msg" id="dataMsg" role="status"></div>
+  </section>
+  <section id="keysSec">
+    <h2>Shortcuts on the page</h2>
+    <div class="keys">
+      <kbd>Alt+Shift+D</kbd><span>Start / stop Handmark</span>
+      <kbd>F</kbd><span>Drawing on / off</span>
+      <kbd>B P H A T</kbd><span>Marker · Pen · Highlighter · Arrow · Text</span>
+      <kbd>L E</kbd><span>Laser · Eraser</span>
+      <kbd>V</kbd> <span>Click-through (also Esc)</span>
+      <kbd>1 2 3</kbd><span>Size</span>
+      <kbd>S G</kbd><span>Smoothing · Fade</span>
+      <kbd>Ctrl+Z</kbd><span>Undo (Shift for redo) · C clears</span>
+    </div>
+  </section>
+</main>
+<script src="common.js"></script>
+<script src="controls.js"></script>
+<script src="pages.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>
