@@ -275,7 +275,14 @@ handmark/
 │   └── fixtures/
 │       ├── article.html
 │       └── malicious-backup.json
+├── store/
+│   ├── STORE_LISTING.md
+│   ├── make-assets.mjs
+│   ├── demo-page.html
+│   ├── promo-small-440x280.png, promo-marquee-1400x560.png
+│   └── screenshots/
 ├── package.json
+├── LICENSE
 ├── README.md
 ├── SECURITY.md
 ├── PRIVACY.md
@@ -381,6 +388,13 @@ Developer scripts only. The extension itself has no dependencies:
 - `npm test`: run the end-to-end tests
 - `npm run check`: syntax-check every script
 - `npm run zip`: build `handmark.zip` for the Chrome Web Store
+- `npm run store-assets`: regenerate the store screenshots and promo tiles
+
+### `store/`
+Chrome Web Store kit: the listing text, the script and demo page that generate screenshots and promo tiles from the real extension, and the generated images.
+
+### `LICENSE`
+MIT licence for the code. The Caveat font keeps its own SIL Open Font License.
 
 ### `SECURITY.md`, `PRIVACY.md`, `CHANGELOG.md`
 The threat model and mitigations, the privacy policy (needed for the Chrome Web Store) and the version history.
@@ -473,7 +487,7 @@ npx playwright install chromium
 npm test
 ```
 
-Expected output ends with `All checks passed` (19 checks). The tests run Chromium headless, so no window opens.
+Expected output ends with `All checks passed` (20 checks). The tests run Chromium headless, so no window opens.
 
 **Manual checks:** the tests can't click Chrome's own toolbar icon or open the real side panel. Before a release, check these by hand:
 - [ ] Clicking the icon opens the side panel and starts drawing
@@ -499,20 +513,11 @@ Expected output ends with `All checks passed` (19 checks). The tests run Chromiu
 
 ## Publishing to the Chrome Web Store
 
-1. Register as a Chrome Web Store developer (one-time fee) at the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
-2. `npm run zip` creates `handmark.zip` from the `extension` folder.
-3. Upload it and fill in the listing:
-   - **Single purpose:** "Draw and annotate on web pages."
-   - **Permission justifications:**
-     - `activeTab` + `scripting`: draw on the tab you start it on
-     - `storage` + `unlimitedStorage`: keep your drawings
-     - `sidePanel`: the controls
-     - `downloads`: save screenshots
-     - optional host access: show saved drawings automatically
-   - **Privacy:** no data collected; link to `PRIVACY.md`.
-4. Add screenshots (1280×800) and a promo image.
-
----
+Everything for the store is in [`store/`](store):
+- **[`store/STORE_LISTING.md`](store/STORE_LISTING.md)** has ready-to-paste text for every field of the Developer Dashboard: summary, description, category, single purpose, a justification for each permission, data-use answers and distribution settings.
+- **`store/screenshots/`** has three 1280×800 screenshots taken from the real extension, plus the 440×280 small promo tile and the 1400×560 marquee.
+- **`npm run store-assets`** regenerates all images after UI changes (`store/make-assets.mjs`, using `store/demo-page.html`).
+- **`npm run zip`** builds `handmark.zip` to upload.
 
 ## Ideas for later
 
@@ -538,4 +543,4 @@ Issues and pull requests are welcome. Please:
 
 ## Licence
 
-Not chosen yet. Add a `LICENSE` file before publishing; MIT is the usual choice for "free for anyone to use". The bundled Caveat font is licensed separately under the SIL Open Font License 1.1 (`extension/fonts/OFL.txt`).
+[MIT](LICENSE): free to use, copy, change and share, including commercially, as long as the licence notice stays in. The bundled Caveat font is licensed separately under the SIL Open Font License 1.1 (`extension/fonts/OFL.txt`).

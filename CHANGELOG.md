@@ -14,4 +14,6 @@ First release.
 - Screenshots of the visible area or the full page, with drawings.
 - Undo, redo and clear page.
 - Security hardening: storage locked to the extension with same-origin access through the service worker, trusted-input checks, closed shadow DOM, no `innerHTML`/`eval`, validated imports, rate limits, no network requests.
-- End-to-end test suite (19 checks).
+- Fix: pressing two shortcut keys quickly (e.g. a size, then a tool) could lose the second one; setting changes are now saved one at a time.
+- MIT licence and a Chrome Web Store kit (listing text, screenshots, promo tiles).
+- End-to-end test suite (20 checks).

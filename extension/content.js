@@ -157,13 +157,19 @@
   async function loadSettings() {
     st.settings = HM.sanitizeSettings(await chrome.runtime.sendMessage({ type: 'hm:get-settings' }));
   }
+  let pendingSettings = 0;
   function setSettings(partial) {
     const next = HM.sanitizeSettings({ ...st.settings, ...partial });
     if (partial.tool && partial.tool !== 'text') commitText();
     st.settings = next;
     if (!st.drawing && partial.tool && partial.tool !== 'through') st.drawing = true;
     refreshUI();
-    chrome.runtime.sendMessage({ type: 'hm:set-settings', settings: partial }).catch(() => {});
+    // While our own changes are on their way, ignore settings echoed back by the service worker:
+    // they can be older than what the user just pressed. The last reply is the final state.
+    pendingSettings++;
+    chrome.runtime.sendMessage({ type: 'hm:set-settings', settings: partial })
+      .then((r) => { if (--pendingSettings === 0 && r) { st.settings = HM.sanitizeSettings(r); refreshUI(); } })
+      .catch(() => { pendingSettings = Math.max(0, pendingSettings - 1); });
   }
 
   // ---------- page data ----------
@@ -595,6 +601,7 @@
         return true;
       }
       case 'hm:settings': {
+        if (pendingSettings > 0) return;
         const prevLayout = st.settings.layout;
         st.settings = HM.sanitizeSettings(msg.settings);
         if (prevLayout !== st.settings.layout) commitText();

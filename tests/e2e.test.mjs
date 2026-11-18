@@ -94,6 +94,11 @@ try {
   const afterRedo = (await status()).count;
   check('undo and redo', afterUndo === 4 && afterRedo === 5, `${afterUndo} → ${afterRedo}`);
 
+  // quick key presses must all stick (size, then tool), even though settings round-trip through the service worker
+  await page.keyboard.press('2'); await page.keyboard.press('h'); await wait(500);
+  const quick = await sw.evaluate(() => chrome.storage.local.get('settings'));
+  check('quick key presses are not lost', quick.settings.size === 2 && quick.settings.tool === 'hl', JSON.stringify(quick.settings));
+  await page.keyboard.press('b');
   await page.keyboard.press('3'); await page.keyboard.press('g');
   await draw([[200, 700], [500, 710], [700, 690]]);
   await wait(800);

@@ -6,6 +6,7 @@ importScripts('common.js');
 const SCRIPT_FILES = ['common.js', 'controls.js', 'content.js'];
 const AUTO_ID = 'handmark-auto-restore';
 let cached = { ...HM.DEFAULTS };
+let settingsQueue = Promise.resolve(cached);
 
 async function loadSettings() {
   const got = await chrome.storage.local.get('settings');
@@ -204,10 +205,14 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
         return loadSettings();
       case 'hm:set-settings': {
         if (!msg.settings || typeof msg.settings !== 'object') return null;
-        const next = HM.sanitizeSettings({ ...(await loadSettings()), ...msg.settings });
-        await chrome.storage.local.set({ settings: next });
-        cached = next;
-        return next;
+        // one change at a time, so quick key presses never overwrite each other
+        settingsQueue = settingsQueue.then(async () => {
+          const next = HM.sanitizeSettings({ ...(await loadSettings()), ...msg.settings });
+          await chrome.storage.local.set({ settings: next });
+          cached = next;
+          return next;
+        }).catch(() => cached);
+        return settingsQueue;
       }
       case 'hm:load-page': {
         const url = HM.normalizeUrl(msg.url);
