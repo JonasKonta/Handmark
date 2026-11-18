@@ -19,41 +19,41 @@ Copy and paste these into the [Chrome Web Store Developer Dashboard](https://chr
 > Draw on any webpage like it's paper: hand-drawn marker, arrows, highlighter, notes and a laser pointer. Drawings stay on the page.
 
 **Description**
-> Draw on any webpage like it's paper.
+> Point, circle and scribble on any webpage while you record or present, with marks that look hand-drawn instead of like a mouse.
 >
-> Handmark adds a hand-drawn layer to the web. Circle what matters, underline the key sentence, draw an arrow and scribble a note, then come back next week and find your marks exactly where you left them.
+> Handmark puts a drawing layer over the page you're on. Circle the button you're talking about, draw an arrow to the line that matters, write a quick note in your own handwriting style. It feels like marking up paper, and it looks that way on camera.
 >
-> Made for screen recordings, presentations, teaching, research and design reviews.
+> BUILT FOR RECORDING AND TEACHING
+> • Controls live in Chrome's side panel, so they never cover the page and stay out of your shot
+> • Laser pointer: a glowing trail that disappears on its own and is never saved
+> • Fade mode: new marks melt away after 3, 5 or 8 seconds, so you can keep talking without stopping to clean up
+> • Or use a floating bar you can drag anywhere on the page, or a pop-up from the toolbar icon
 >
-> TOOLS
-> • Marker brush that thins slightly when you move fast, like a real felt-tip
-> • Pen, highlighter and arrows that draw their own heads
-> • Handwritten text notes (supports accents and diacritics)
-> • Laser pointer that leaves no trace
-> • Eraser, undo, redo, clear
+> MARKS THAT LOOK HAND-DRAWN
+> • Felt-tip marker that thins slightly when you move fast
+> • Arrows that draw their own heads and smooth into clean curves
+> • See-through highlighter that blends with the text underneath
+> • Handwritten notes (accents and diacritics included)
+> • Pen for precise lines, eraser for whole marks
+> • Four colours plus a colour wheel for any colour, in three sizes
 >
-> LINE CORRECTION
-> • Stabiliser smooths shaky lines and handwriting
-> • Pause at the end of a stroke to snap it into a clean, still hand-drawn, straight line
+> STEADY HANDS NOT REQUIRED
+> • The Smooth setting takes the wobble out of lines and handwriting
+> • Pause at the end of a stroke and it snaps straight, still with a hand-drawn edge
+> • Undo, redo and clear page
 >
-> FOR RECORDINGS
-> • Fade mode: new marks disappear after 3, 5 or 8 seconds
-> • Controls in Chrome's side panel, so they never cover the page and are easy to crop out
-> • Or use a pop-up from the toolbar icon, or a floating bar on the page
->
-> SAVED PER PAGE
-> • Drawings save automatically and come back when you reopen the page
-> • Tracking parameters are ignored, so the same article from different links finds the same drawings
-> • Saved pages list with previews, export and import backups
-> • Screenshots of the visible area or the whole page, with your drawings
+> YOUR MARKS STAY PUT
+> • Drawings save automatically and come back when you reopen the page, weeks later too
+> • Saved pages list with previews, plus export and import for backups
+> • Screenshots of the visible area or the full page, drawings included
 >
 > PRIVATE BY DESIGN
-> • No account, no server, no analytics, no network requests
-> • Everything stays on your computer
-> • Nothing is saved in incognito
+> • No account, no server, no analytics: Handmark never makes a network request
+> • Everything stays on your computer, and nothing is saved in incognito
 > • Open source (MIT)
 >
-> Keyboard: Alt+Shift+D to start, F to draw on/off, B P H A T L E for tools.
+> QUICK KEYS
+> Alt+Shift+D to start · F drawing on/off · B marker · A arrow · H highlighter · T text · L laser · E eraser · G fade · S smooth · Esc to click the page
 
 **Category**
 > Tools

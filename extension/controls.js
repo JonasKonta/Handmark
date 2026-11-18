@@ -22,7 +22,7 @@
     redo: [['path', 'M15 14l5-5-5-5'], ['path', 'M20 9H10a6 6 0 000 12h3']],
     clear: [['path', 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13']],
     shot: [['path', 'M4 8h3l2-3h6l2 3h3v11H4z'], ['circle', 12, 13, 3.5]],
-    settings: [['circle', 12, 12, 3], ['path', 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1']],
+    settings: [['path', 'M18.88 9.87L21.66 10.34L21.66 13.66L18.88 14.13L18.37 15.36L20.00 17.66L17.66 20.00L15.36 18.37L14.13 18.88L13.66 21.66L10.34 21.66L9.87 18.88L8.64 18.37L6.34 20.00L4.00 17.66L5.63 15.36L5.12 14.13L2.34 13.66L2.34 10.34L5.12 9.87L5.63 8.64L4.00 6.34L6.34 4.00L8.64 5.63L9.87 5.12L10.34 2.34L13.66 2.34L14.13 5.12L15.36 5.63L17.66 4.00L20.00 6.34L18.37 8.64z'], ['circle', 12, 12, 2.8]],
   };
   const TOOL_INFO = [
     ['brush', 'Marker brush (B)'], ['pen', 'Pen (P)'], ['hl', 'Highlighter (H)'], ['arrow', 'Arrow (A)'],
@@ -55,8 +55,12 @@
 .hmc svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .hmc .sw{width:22px;height:22px;border-radius:50%;border:2px solid #3c3a35;margin:0 2px;padding:0;flex:none}
 .hmc .sw[aria-pressed="true"]{outline:2px solid #f3eee4;outline-offset:2px}
-.hmc .custom{position:relative;width:22px;height:22px;border-radius:50%;overflow:hidden;border:2px dashed #6b6860;margin:0 2px;flex:none;display:block}
-.hmc .custom[data-on="true"]{outline:2px solid #f3eee4;outline-offset:2px;border-style:solid}
+.hmc .custom{position:relative;width:22px;height:22px;border-radius:50%;overflow:hidden;border:0;margin:0 2px;flex:none;display:block;cursor:pointer;background:conic-gradient(from 0deg,#ff3b30,#ff9500,#ffcc00,#34c759,#00c7be,#007aff,#5856d6,#af52de,#ff2d55,#ff3b30)}
+.hmc .custom::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 70%);pointer-events:none}
+.hmc .custom::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--c,#2F6BFF);box-shadow:0 0 0 2px #1b1a18;opacity:0;pointer-events:none}
+.hmc .custom[data-on="true"]{outline:2px solid #f3eee4;outline-offset:2px}
+.hmc .custom[data-on="true"]::after{opacity:1}
+.hmc .custom:hover{transform:scale(1.08)}
 .hmc .custom input{position:absolute;inset:-6px;width:40px;height:40px;opacity:0;cursor:pointer;border:0;padding:0}
 .hmc .mini{font-weight:600;font-size:11.5px;border-radius:7px;padding:6px 9px}
 .hmc .mini:hover{background:#2f2d29}
@@ -96,7 +100,7 @@
       b.addEventListener('click', (e) => { if (e.isTrusted) opts.onSetting({ color: c.hex }); });
       swatches.push(b); colorRow.appendChild(b);
     }
-    const custom = el('label', 'custom'); custom.title = 'Custom colour';
+    const custom = el('label', 'custom'); custom.title = 'Pick any colour';
     const customIn = el('input'); customIn.type = 'color'; customIn.setAttribute('aria-label', 'Custom colour');
     customIn.addEventListener('input', (e) => { if (e.isTrusted) opts.onSetting({ color: customIn.value.toUpperCase(), custom: customIn.value.toUpperCase() }); });
     custom.appendChild(customIn); colorRow.appendChild(custom);
@@ -143,7 +147,7 @@
       for (const [name, b] of Object.entries(toolBtns)) b.setAttribute('aria-pressed', String(s.tool === name));
       for (const b of swatches) b.setAttribute('aria-pressed', String(b.dataset.c === s.color));
       customIn.value = s.custom.toLowerCase();
-      custom.style.background = s.custom;
+      custom.style.setProperty('--c', s.custom);
       custom.dataset.on = String(!HM.COLORS.some((c) => c.hex === s.color));
       for (const [n, b] of Object.entries(sizeBtns)) b.setAttribute('aria-pressed', String(Number(n) === s.size));
       stabBtn.textContent = 'Smooth: ' + STAB_NAMES[s.stab];

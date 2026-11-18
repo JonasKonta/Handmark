@@ -50,7 +50,7 @@ Your drawings stay on the page and come back when you reopen it, weeks later too
 | Click-through | `V` / `Esc` | Use the page normally (scroll, click links); your drawings stay visible. |
 
 **Line correction**
-- **Stabiliser** (Off / Low / High, key `S`): the line trails slightly behind your cursor so small shakes smooth out. Low suits handwriting; High suits big shapes.
+- **Stabiliser** (Off / Low / High, key `S`): the line trails slightly behind your cursor so small shakes smooth out. Low suits handwriting; High suits big shapes. Arrows also get extra smoothing into a clean curve, at the strength you pick here. The start point, end point and arrowhead direction stay where you drew them.
 - **Hold to straighten:** pause for half a second at the end of a stroke and it snaps into a straight line that keeps the marker's hand-drawn edge. Works for arrows too.
 
 **For recordings and presentations**
@@ -61,10 +61,10 @@ Your drawings stay on the page and come back when you reopen it, weeks later too
 **Three layouts for the controls** (choose in Settings)
 1. **Side panel** (default): docked in Chrome's built-in side panel and stays open across tabs.
 2. **Pop-up:** click the toolbar icon to pick a tool; it closes when you click the page.
-3. **Floating:** a draggable bar on the page with 10 px rounded corners. It collapses to a small handle when drawing is off.
+3. **Floating:** a bar on the page with 10 px rounded corners. Drag it by the dotted handle on either end (or by the yellow button) to move it. It collapses to a small handle when drawing is off.
 
 **Colours and sizes**
-- Four preset colours (yellow `#FFC702`, cream `#F6F0E2`, black `#141312`, orange `#FA4101`) plus a custom colour picker.
+- Four preset colours (yellow `#FFC702`, cream `#F6F0E2`, black `#141312`, orange `#FA4101`) plus a rainbow colour wheel for picking any colour. When a custom colour is in use, it shows as a dot in the middle of the wheel.
 - Three sizes (S, M, L).
 
 **Saving and sharing**
