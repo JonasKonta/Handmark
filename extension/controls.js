@@ -55,8 +55,12 @@
 .hmc svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .hmc .sw{width:22px;height:22px;border-radius:50%;border:2px solid #3c3a35;margin:0 2px;padding:0;flex:none}
 .hmc .sw[aria-pressed="true"]{outline:2px solid #f3eee4;outline-offset:2px}
-.hmc .custom{position:relative;width:22px;height:22px;border-radius:50%;overflow:hidden;border:2px dashed #6b6860;margin:0 2px;flex:none;display:block}
-.hmc .custom[data-on="true"]{outline:2px solid #f3eee4;outline-offset:2px;border-style:solid}
+.hmc .custom{position:relative;width:22px;height:22px;border-radius:50%;overflow:hidden;border:0;margin:0 2px;flex:none;display:block;cursor:pointer;background:conic-gradient(from 0deg,#ff3b30,#ff9500,#ffcc00,#34c759,#00c7be,#007aff,#5856d6,#af52de,#ff2d55,#ff3b30)}
+.hmc .custom::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 70%);pointer-events:none}
+.hmc .custom::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--c,#2F6BFF);box-shadow:0 0 0 2px #1b1a18;opacity:0;pointer-events:none}
+.hmc .custom[data-on="true"]{outline:2px solid #f3eee4;outline-offset:2px}
+.hmc .custom[data-on="true"]::after{opacity:1}
+.hmc .custom:hover{transform:scale(1.08)}
 .hmc .custom input{position:absolute;inset:-6px;width:40px;height:40px;opacity:0;cursor:pointer;border:0;padding:0}
 .hmc .mini{font-weight:600;font-size:11.5px;border-radius:7px;padding:6px 9px}
 .hmc .mini:hover{background:#2f2d29}
@@ -96,7 +100,7 @@
       b.addEventListener('click', (e) => { if (e.isTrusted) opts.onSetting({ color: c.hex }); });
       swatches.push(b); colorRow.appendChild(b);
     }
-    const custom = el('label', 'custom'); custom.title = 'Custom colour';
+    const custom = el('label', 'custom'); custom.title = 'Pick any colour';
     const customIn = el('input'); customIn.type = 'color'; customIn.setAttribute('aria-label', 'Custom colour');
     customIn.addEventListener('input', (e) => { if (e.isTrusted) opts.onSetting({ color: customIn.value.toUpperCase(), custom: customIn.value.toUpperCase() }); });
     custom.appendChild(customIn); colorRow.appendChild(custom);
@@ -143,7 +147,7 @@
       for (const [name, b] of Object.entries(toolBtns)) b.setAttribute('aria-pressed', String(s.tool === name));
       for (const b of swatches) b.setAttribute('aria-pressed', String(b.dataset.c === s.color));
       customIn.value = s.custom.toLowerCase();
-      custom.style.background = s.custom;
+      custom.style.setProperty('--c', s.custom);
       custom.dataset.on = String(!HM.COLORS.some((c) => c.hex === s.color));
       for (const [n, b] of Object.entries(sizeBtns)) b.setAttribute('aria-pressed', String(Number(n) === s.size));
       stabBtn.textContent = 'Smooth: ' + STAB_NAMES[s.stab];

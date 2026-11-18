@@ -50,6 +50,14 @@
 .grip{width:30px;height:30px;border-radius:7px;background:#FFC702;border:0;cursor:grab;display:grid;place-items:center;flex:none;padding:0}
 .grip svg{width:18px;height:18px;stroke:#141312;fill:none;stroke-width:2.2;stroke-linecap:round}
 .grip:focus-visible{outline:2px solid #FFC702;outline-offset:2px}
+.mover{flex:none;align-self:stretch;width:18px;min-height:30px;margin:-6px 0;border-radius:9px 0 0 9px;background:#2b2926;cursor:grab;touch-action:none;display:grid;place-items:center;border-right:1px solid #3c3a35}
+.mover.end{border-radius:0 9px 9px 0;border-right:0;border-left:1px solid #3c3a35}
+.mover:first-child{margin-left:-6px;margin-right:4px}
+.mover.end{margin-right:-6px;margin-left:4px}
+.mover::before{content:"";width:8px;height:20px;background-image:radial-gradient(circle,#b5afa3 1.5px,transparent 1.9px);background-size:4px 5px;background-repeat:repeat}
+.mover:hover{background:#363430}
+.mover:hover::before{background-image:radial-gradient(circle,#f3eee4 1.2px,transparent 1.5px)}
+.bar.dragging,.bar.dragging .mover,.bar.dragging .grip{cursor:grabbing}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d1c1a;color:#f3eee4;border:1px solid #3c3a35;border-radius:10px;padding:8px 16px;font:500 13px system-ui,sans-serif;max-width:min(560px,90vw);pointer-events:none}
 .notice{position:fixed;right:16px;bottom:16px;width:min(320px,calc(100vw - 32px));background:#1d1c1a;color:#f3eee4;border:1px solid #3c3a35;border-radius:10px;padding:12px 14px;font:13px/1.45 system-ui,sans-serif;pointer-events:auto;display:grid;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .notice .acts{display:flex;gap:8px;justify-content:flex-end}
@@ -91,7 +99,11 @@
       onAction: (n) => runAction(n),
       onOpenSettings: () => chrome.runtime.sendMessage({ type: 'hm:open-options' }).catch(() => {}),
     });
-    bar.append(grip, controls.el);
+    const moverL = document.createElement('div');
+    const moverR = document.createElement('div');
+    for (const m of [moverL, moverR]) { m.className = 'mover'; m.title = 'Drag to move the toolbar'; m.setAttribute('aria-hidden', 'true'); }
+    moverR.classList.add('end');
+    bar.append(moverL, grip, controls.el, moverR);
 
     const toast = document.createElement('div'); toast.className = 'toast'; toast.hidden = true; toast.setAttribute('role', 'status');
     const notice = document.createElement('div'); notice.className = 'notice'; notice.hidden = true;
@@ -100,22 +112,34 @@
     (document.documentElement || document.body).appendChild(host);
     ui = { host, root, canvas, ctx, bar, grip, controls, toast, notice };
 
-    // drag the floating bar
-    let drag = null;
-    grip.addEventListener('pointerdown', (e) => {
-      if (!e.isTrusted) return;
-      const r = bar.getBoundingClientRect();
-      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
-      grip.setPointerCapture(e.pointerId);
-    });
-    grip.addEventListener('pointermove', (e) => {
-      if (!drag || !e.isTrusted) return;
-      drag.moved = true;
-      const x = Math.max(4, Math.min(innerWidth - bar.offsetWidth - 4, e.clientX - drag.dx));
-      const y = Math.max(4, Math.min(innerHeight - bar.offsetHeight - 4, e.clientY - drag.dy));
-      bar.style.left = x + 'px'; bar.style.top = y + 'px';
-    });
-    grip.addEventListener('pointerup', (e) => { if (e.isTrusted && drag && !drag.moved) toggleDrawing(); drag = null; });
+    // drag the floating bar: by either side handle, or by the grip (where a click without moving toggles drawing)
+    function makeDraggable(el, onClick) {
+      let drag = null;
+      el.addEventListener('pointerdown', (e) => {
+        if (!e.isTrusted || e.button !== 0) return;
+        const r = bar.getBoundingClientRect();
+        drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, moved: false };
+        el.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!drag || !e.isTrusted) return;
+        if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 3) return;
+        drag.moved = true; bar.classList.add('dragging');
+        const x = Math.max(4, Math.min(innerWidth - bar.offsetWidth - 4, e.clientX - drag.dx));
+        const y = Math.max(4, Math.min(innerHeight - bar.offsetHeight - 4, e.clientY - drag.dy));
+        bar.style.left = x + 'px'; bar.style.top = y + 'px';
+      });
+      const end = (e) => {
+        if (e.isTrusted && drag && !drag.moved && onClick && e.type === 'pointerup') onClick();
+        drag = null; bar.classList.remove('dragging');
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    }
+    makeDraggable(grip, toggleDrawing);
+    makeDraggable(moverL);
+    makeDraggable(moverR);
     grip.addEventListener('keydown', (e) => { if (e.isTrusted && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleDrawing(); } });
 
     canvas.addEventListener('pointerdown', onDown);
