@@ -50,7 +50,7 @@ Your drawings stay on the page and come back when you reopen it, weeks later too
 | Click-through | `V` / `Esc` | Use the page normally (scroll, click links); your drawings stay visible. |
 
 **Line correction**
-- **Stabiliser** (Off / Low / High, key `S`): the line trails slightly behind your cursor so small shakes smooth out. Low suits handwriting; High suits big shapes.
+- **Stabiliser** (Off / Low / High, key `S`): the line trails slightly behind your cursor so small shakes smooth out. Low suits handwriting; High suits big shapes. Arrows also get extra smoothing into a clean curve, at the strength you pick here. The start point, end point and arrowhead direction stay where you drew them.
 - **Hold to straighten:** pause for half a second at the end of a stroke and it snaps into a straight line that keeps the marker's hand-drawn edge. Works for arrows too.
 
 **For recordings and presentations**

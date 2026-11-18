@@ -16,6 +16,8 @@
   if (!HM || !HC) return;
 
   const STAB = [1, 0.45, 0.2];
+  // extra smoothing for arrows (Off / Low / High): moving-average radius in points, and number of passes
+  const ARROW_SMOOTH = [[3, 1], [6, 2], [10, 3]];
   const HOLD_MS = 500;
   const FONT = '"Handmark Caveat", "Segoe Print", "Bradley Hand", cursive';
   const INCOGNITO = !!(chrome.extension && chrome.extension.inIncognitoContext);
@@ -329,12 +331,30 @@
     if (cur.erase) { const hit = cur.hit; cur = null; if (hit) changed(); else st.undo.pop(); return; }
     const s = cur; cur = null;
     if (s.p.length === 3) s.p.push(s.p[0] + 0.5, s.p[1] + 0.5, 10);
+    if (s.t === 'arrow' && !s.straight) s.p = smoothArrow(s.p, st.settings.stab);
     if (st.strokes.length >= HM.LIMITS.strokesPerPage) { toast('This page has reached the limit of ' + HM.LIMITS.strokesPerPage + ' marks'); schedule(); return; }
     const stroke = { t: s.t, c: s.c, w: s.w, p: s.p, done: now(), fade: st.settings.fade, fadeMs: st.settings.fadeMs };
     stroke.bb = bbox(stroke);
     pushHistory(); st.strokes.push(stroke);
     schedule();
     if (!stroke.fade) { scheduleSave(); notifyPanel(); }
+  }
+  // Smooths an arrow's path into a clean curve. The first and last points stay exactly where they were drawn;
+  // the averaging window shrinks towards the ends so the arrowhead keeps the drawn direction.
+  function smoothArrow(p, stab) {
+    const n = p.length / 3; if (n < 5) return p;
+    const [r, passes] = ARROW_SMOOTH[stab] || ARROW_SMOOTH[1];
+    let a = p.slice();
+    for (let k = 0; k < passes; k++) {
+      const b = a.slice();
+      for (let i = 1; i < n - 1; i++) {
+        const w = Math.min(r, i, n - 1 - i); let x = 0, y = 0;
+        for (let j = i - w; j <= i + w; j++) { x += a[j * 3]; y += a[j * 3 + 1]; }
+        b[i * 3] = x / (2 * w + 1); b[i * 3 + 1] = y / (2 * w + 1);
+      }
+      a = b;
+    }
+    return a;
   }
   function armHold() { clearTimeout(holdTimer); holdTimer = setTimeout(straighten, HOLD_MS); }
   function straighten() {
@@ -477,7 +497,7 @@
       let a = 1; if (s.fade) { a = Math.max(0, 1 - (t - s.done) / s.fadeMs); animate = true; }
       drawStroke(g, s, a);
     }
-    if (cur && cur.p) { drawStroke(g, cur, 1); animate = true; }
+    if (cur && cur.p) { drawStroke(g, cur.t === 'arrow' && !cur.straight ? { ...cur, p: smoothArrow(cur.p, st.settings.stab) } : cur, 1); animate = true; }
     laserPts = laserPts.filter((q) => t - q.t < 700);
     if (laserPts.length) {
       g.setTransform(d, 0, 0, d, 0, 0);
