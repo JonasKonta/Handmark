@@ -40,6 +40,22 @@
     <div class="grp">
       <h2>Background</h2>
       <div class="swatches" id="bgs"></div>
+      <div class="sub" id="gradPanel" hidden>
+        <div class="colors">
+          <label class="cpick"><input type="color" id="g1" aria-label="First gradient colour"><span>From</span></label>
+          <button class="swap" id="swapBtn" type="button" title="Swap colours" aria-label="Swap colours"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg></button>
+          <label class="cpick"><input type="color" id="g2" aria-label="Second gradient colour"><span>To</span></label>
+        </div>
+        <div class="seg chips two" id="gTypes"></div>
+        <label class="slider" id="angleRow"><span>Angle</span><output id="gAngleOut"></output><input type="range" id="gAngle" min="0" max="360"></label>
+      </div>
+      <div class="sub" id="imgPanel" hidden>
+        <div class="imgrow"><canvas id="bgThumb" width="96" height="60"></canvas><div class="row"><button class="btn" id="bgPickBtn" type="button">Replace image…</button><button class="btn" id="bgRemoveBtn" type="button">Remove</button></div></div>
+        <label class="slider"><span>Blur</span><output id="blurOut"></output><input type="range" id="blur" min="0" max="40"></label>
+        <label class="slider"><span>Darken</span><output id="dimOut"></output><input type="range" id="dim" min="0" max="80"></label>
+      </div>
+      <input type="file" id="bgFile" accept="image/png,image/jpeg,image/webp,image/gif,image/avif,image/bmp" hidden>
+      <p class="note" id="dropNote">Tip: drop an image onto the preview to use it as the background.</p>
     </div>
     <div class="grp">
       <h2>Frame</h2>
@@ -53,6 +69,15 @@
       <label class="slider"><span>Padding</span><output id="padOut"></output><input type="range" id="pad" min="0" max="100"></label>
       <label class="slider"><span>Corners</span><output id="radiusOut"></output><input type="range" id="radius" min="0" max="40"></label>
       <label class="slider"><span>Shadow</span><output id="shadowOut"></output><input type="range" id="shadow" min="0" max="100"></label>
+    </div>
+    <div class="grp">
+      <h2>Inset border</h2>
+      <label class="slider"><span>Border width</span><output id="insetOut"></output><input type="range" id="inset" min="0" max="100"></label>
+      <div class="insetopts" id="insetOpts">
+        <div class="seg chips four" id="insets"></div>
+        <label class="slider"><span>Inner corners</span><output id="innerRadiusOut"></output><input type="range" id="innerRadius" min="0" max="40"></label>
+      </div>
+      <p class="note">A mat around the capture, like a passport photo. Corners shapes its outside, Inner corners the capture inside it.</p>
     </div>
     <div class="grp">
       <div class="row"><button class="btn" id="plainBtn" type="button">No styling</button><button class="btn" id="resetBtn" type="button">Reset style</button></div>

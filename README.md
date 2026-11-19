@@ -87,14 +87,15 @@ Open the camera button in the controls, or use a shortcut:
 | Record an area (video) | `Ctrl+Shift+K` | Drag a rectangle, then everything in it is recorded (scrolling, your marker, the laser) until you press **Stop** or the shortcut again. Up to 10 minutes. |
 
 Captures open in the **editor**, where you can make them presentable:
-- **Background:** 10 gradients, a custom colour, or transparent
+- **Background:** 10 preset gradients, a solid colour, **your own gradient** (two colours, linear with an angle or radial), **your own image** (pick a file or drop it on the preview; blur and darken sliders), or transparent
 - **Frame:** a browser window (light or dark, with the site's address) or a plain window with traffic lights
 - **Aspect ratio:** auto, 16:9, 4:3, 1:1, 4:5 or 9:16 (for slides and social posts)
 - **Padding, rounded corners and shadow** sliders
+- **Inset border:** a mat around the capture, like a passport photo: width slider, white, black, frosted glass or any colour, and separate **inner corners** for the capture inside it
 - **Download PNG**, **Copy** to the clipboard, or **Save original**
 - For recordings: preview, **Export styled video** (MP4 where Chrome supports it, otherwise WebM) or **Save original video**
 
-Your style is remembered for the next capture. To skip the editor for screenshots, choose **Settings → After a screenshot → Save straight away**. Files go to `Downloads/Handmark`.
+Your style is remembered for the next capture. Your background image is kept in Handmark's local storage (resized to at most 3840 px) until you remove it. To skip the editor for screenshots, choose **Settings → After a screenshot → Save straight away**. Files go to `Downloads/Handmark`.
 
 Recording needs one click on the Handmark icon (or `Alt+Shift+D`) on that tab first: Chrome only lets extensions record a tab the user has explicitly invoked them on.
 

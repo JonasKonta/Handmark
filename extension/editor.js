@@ -9,6 +9,7 @@
   const out = $('out'), g = out.getContext('2d');
   let style = { ...S.DEFAULT_STYLE };
   let rec = null, src = null, sw = 0, sh = 0, host = '', video = null, objUrl = null, exporting = null;
+  let bgImg = null; // your own background image (an ImageBitmap), kept in chrome.storage.local as 'shotBgImage'
 
   // ---------- helpers ----------
   let toastTimer = 0;
@@ -38,7 +39,7 @@
   function render() {
     raf = 0;
     if (!src) return;
-    const L = S.draw(g, src, sw, sh, style, { host, even: !!video });
+    const L = S.draw(g, src, sw, sh, style, { host, even: !!video, bgImage: bgImg });
     $('wrap').classList.toggle('tall', L.H / L.W > 2.2);
     $('dims').textContent = `${L.W} × ${L.H} px${video ? '' : ' · PNG'}`;
   }
@@ -70,20 +71,108 @@
   customIn.addEventListener('input', (e) => { if (e.isTrusted) setStyle({ bg: 'custom', custom: customIn.value }); });
   customIn.addEventListener('click', (e) => { if (e.isTrusted && style.bg !== 'custom') setStyle({ bg: 'custom' }); });
   customBtn.appendChild(customIn);
-  bgBtns.push(noneBtn, customBtn); $('bgs').append(noneBtn, customBtn);
+  customBtn.title = 'Solid colour';
+  const gradBtn = btn('sw grad', 'Your own gradient', () => setStyle({ bg: 'gradient' })); gradBtn.dataset.v = 'gradient';
+  const imgBtn = btn('sw img', 'Your own image', () => { if (bgImg) setStyle({ bg: 'image' }); else $('bgFile').click(); }); imgBtn.dataset.v = 'image';
+  const SVG = 'http://www.w3.org/2000/svg';
+  const imgIcon = document.createElementNS(SVG, 'svg'); imgIcon.setAttribute('viewBox', '0 0 24 24');
+  for (const d of ['M4 5h16v14H4z', 'M4 16l5-5 4 4 3-3 4 4']) { const pth = document.createElementNS(SVG, 'path'); pth.setAttribute('d', d); imgIcon.appendChild(pth); }
+  const imgDot = document.createElementNS(SVG, 'circle'); imgDot.setAttribute('cx', '15.5'); imgDot.setAttribute('cy', '9'); imgDot.setAttribute('r', '1.5'); imgIcon.appendChild(imgDot);
+  imgBtn.appendChild(imgIcon);
+  bgBtns.push(noneBtn, customBtn, gradBtn, imgBtn); $('bgs').append(noneBtn, customBtn, gradBtn, imgBtn);
+
+  // your own gradient
+  for (const k of ['g1', 'g2']) $(k).addEventListener('input', (e) => { if (e.isTrusted) setStyle({ bg: 'gradient', [k]: e.target.value }); });
+  $('swapBtn').addEventListener('click', () => setStyle({ g1: style.g2, g2: style.g1 }));
+  const typeBtns = [['linear', 'Linear'], ['radial', 'Radial']].map(([k, label]) => { const b = btn(null, label + ' gradient', () => setStyle({ gType: k })); b.textContent = label; b.dataset.v = k; $('gTypes').appendChild(b); return b; });
+
+  // inset border colour
+  const insetBtns = S.INSETS.map(([k, label]) => {
+    const b = btn(null, label + ' border', () => setStyle({ insetColor: k, inset: style.inset || 30 }));
+    const chip = document.createElement('i');
+    chip.style.background = { white: '#FFFFFF', black: '#141312', glass: 'linear-gradient(135deg,rgba(255,255,255,.75),rgba(255,255,255,.2))' }[k] || '';
+    b.append(chip, document.createTextNode(label)); b.dataset.v = k;
+    if (k === 'custom') {
+      const ci = document.createElement('input'); ci.type = 'color'; ci.setAttribute('aria-label', 'Custom border colour');
+      ci.addEventListener('input', (e) => { if (e.isTrusted) setStyle({ insetColor: 'custom', insetCustom: e.target.value, inset: style.inset || 30 }); });
+      b.appendChild(ci); b.chip = chip; b.input = ci;
+    }
+    $('insets').appendChild(b); return b;
+  });
+
+  // your own background image: resized to at most 3840 px and stored locally
+  const BG_MAX_BYTES = 40 * 1024 * 1024, BG_MAX_SIDE = 3840;
+  async function useBgFile(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type) || file.size > BG_MAX_BYTES) { toast('Choose an image file under 40 MB'); return; }
+    let bmp;
+    try { bmp = await createImageBitmap(file); } catch { toast('This image could not be opened'); return; }
+    const k = Math.min(1, BG_MAX_SIDE / Math.max(bmp.width, bmp.height));
+    const c = new OffscreenCanvas(Math.max(1, Math.round(bmp.width * k)), Math.max(1, Math.round(bmp.height * k)));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await c.convertToBlob({ type: 'image/webp', quality: 0.9 });
+    const data = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+    await chrome.storage.local.set({ shotBgImage: { data, w: c.width, h: c.height, added: Date.now() } });
+    await loadBgImage();
+    setStyle({ bg: 'image' });
+    toast('Background image added');
+  }
+  async function loadBgImage() {
+    const { shotBgImage: v } = await chrome.storage.local.get('shotBgImage');
+    bgImg = null;
+    if (v && typeof v.data === 'string' && v.data.startsWith('data:image/')) {
+      try { bgImg = await createImageBitmap(await (await fetch(v.data)).blob()); bgImg.__hmId = String(v.added || ''); } catch { bgImg = null; }
+    }
+    const t = $('bgThumb').getContext('2d');
+    t.clearRect(0, 0, 96, 60);
+    imgBtn.style.backgroundImage = '';
+    if (bgImg) {
+      const k = Math.max(96 / bgImg.width, 60 / bgImg.height);
+      t.drawImage(bgImg, (96 - bgImg.width * k) / 2, (60 - bgImg.height * k) / 2, bgImg.width * k, bgImg.height * k);
+      imgBtn.style.backgroundImage = `url(${$('bgThumb').toDataURL('image/png')})`;
+    }
+    imgBtn.title = bgImg ? 'Your image' : 'Add your own image';
+    imgBtn.setAttribute('aria-label', imgBtn.title);
+    schedule();
+  }
+  $('bgPickBtn').addEventListener('click', () => $('bgFile').click());
+  $('bgFile').addEventListener('change', (e) => { useBgFile(e.target.files[0]); e.target.value = ''; });
+  $('bgRemoveBtn').addEventListener('click', async () => {
+    await chrome.storage.local.remove('shotBgImage');
+    await loadBgImage();
+    setStyle({ bg: S.DEFAULT_STYLE.bg });
+    toast('Background image removed');
+  });
+  // drop an image file onto the preview
+  const stage = $('stage');
+  stage.addEventListener('dragover', (e) => { if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) { e.preventDefault(); stage.classList.add('drop'); } });
+  stage.addEventListener('dragleave', () => stage.classList.remove('drop'));
+  stage.addEventListener('drop', (e) => { e.preventDefault(); stage.classList.remove('drop'); if (!exporting) useBgFile(e.dataTransfer.files[0]); });
 
   const frameBtns = S.FRAMES.map(([k, label]) => { const b = btn(null, label, () => setStyle({ frame: k })); b.textContent = label; b.dataset.v = k; $('frames').appendChild(b); return b; });
   const ratioBtns = S.RATIOS.map(([k, label]) => { const b = btn(null, 'Aspect ratio ' + label, () => setStyle({ ratio: k })); b.textContent = label; b.dataset.v = k; $('ratios').appendChild(b); return b; });
-  for (const k of ['pad', 'radius', 'shadow']) $(k).addEventListener('input', (e) => { if (e.isTrusted) setStyle({ [k]: Number(e.target.value) }); });
+  const SLIDERS = ['pad', 'radius', 'shadow', 'inset', 'innerRadius', 'gAngle', 'blur', 'dim'];
+  for (const k of SLIDERS) $(k).addEventListener('input', (e) => { if (e.isTrusted) setStyle({ [k]: Number(e.target.value) }); });
   $('resetBtn').addEventListener('click', () => setStyle({ ...S.DEFAULT_STYLE }));
-  $('plainBtn').addEventListener('click', () => setStyle({ bg: 'none', pad: 0, radius: 0, shadow: 0, frame: 'none', ratio: 'auto' }));
+  $('plainBtn').addEventListener('click', () => setStyle({ bg: 'none', pad: 0, radius: 0, shadow: 0, frame: 'none', ratio: 'auto', inset: 0 }));
 
   function showStyle() {
     for (const b of bgBtns) b.setAttribute('aria-pressed', String(b.dataset.v === style.bg));
     customBtn.style.background = style.custom; customIn.value = style.custom.toLowerCase();
     for (const b of frameBtns) b.setAttribute('aria-pressed', String(b.dataset.v === style.frame));
     for (const b of ratioBtns) b.setAttribute('aria-pressed', String(b.dataset.v === style.ratio));
-    for (const k of ['pad', 'radius', 'shadow']) { $(k).value = String(style[k]); $(k + 'Out').textContent = String(style[k]); }
+    for (const k of SLIDERS) { $(k).value = String(style[k]); $(k + 'Out').textContent = String(style[k]) + (k === 'gAngle' ? '°' : ''); }
+    $('gradPanel').hidden = style.bg !== 'gradient';
+    $('imgPanel').hidden = style.bg !== 'image' || !bgImg;
+    $('g1').value = style.g1.toLowerCase(); $('g2').value = style.g2.toLowerCase();
+    gradBtn.style.background = style.bg === 'gradient' ? (style.gType === 'radial' ? `radial-gradient(${style.g1}, ${style.g2})` : `linear-gradient(${style.gAngle}deg, ${style.g1}, ${style.g2})`) : '';
+    for (const b of typeBtns) b.setAttribute('aria-pressed', String(b.dataset.v === style.gType));
+    $('angleRow').hidden = style.gType === 'radial';
+    for (const b of insetBtns) b.setAttribute('aria-pressed', String(style.inset > 0 && b.dataset.v === style.insetColor));
+    const cb = insetBtns.find((b) => b.input);
+    cb.chip.style.background = style.insetCustom; cb.input.value = style.insetCustom.toLowerCase();
+    $('insetOpts').setAttribute('aria-disabled', String(style.inset === 0));
+    $('innerRadius').disabled = style.inset === 0;
   }
 
   // ---------- actions ----------
@@ -202,6 +291,7 @@
   (async () => {
     const got = await chrome.storage.local.get('shotStyle');
     style = S.sanitizeStyle(got.shotStyle);
+    await loadBgImage();
     showStyle();
     rec = await M.get(location.hash.slice(1)).catch(() => null);
     if (!rec || !(rec.blob instanceof Blob)) {
@@ -223,7 +313,9 @@
   })();
 
   chrome.storage.onChanged.addListener((c, area) => {
-    if (area === 'local' && c.shotStyle && !exporting) { style = S.sanitizeStyle(c.shotStyle.newValue); showStyle(); schedule(); }
+    if (area !== 'local' || exporting) return;
+    if (c.shotBgImage) loadBgImage().then(showStyle);
+    if (c.shotStyle) { style = S.sanitizeStyle(c.shotStyle.newValue); showStyle(); schedule(); }
   });
   window.addEventListener('pagehide', () => { if (objUrl) URL.revokeObjectURL(objUrl); });
 })();

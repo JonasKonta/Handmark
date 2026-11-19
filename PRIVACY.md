@@ -20,6 +20,7 @@ If you allow Handmark in incognito windows, nothing you draw there is stored.
 
 ## Screenshots, recordings and backups
 - Screenshots and recordings are kept in Handmark's own local storage for up to a day so the editor can open them, and saved to your Downloads folder (`Downloads/Handmark`) when you choose. They never leave your computer.
+- A background image you add in the editor is stored in Handmark's local storage until you remove it.
 - Recording uses Chrome's tab capture only for the tab and area you choose, only while the recording runs.
 - Backup files are created only when you click **Export**. They contain your drawings, page addresses and titles, and are saved where you choose.
 

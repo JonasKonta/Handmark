@@ -7,7 +7,9 @@
 - Setting **After a screenshot**: open the editor (default) or save straight away.
 - Recording bar with Stop in the side panel and pop-up; a frame and Stop button on the page, kept outside the recorded area.
 - New permissions: `tabCapture` (record the tab you choose) and `offscreen` (encode the recording in the background).
-- 30 end-to-end checks.
+- Editor backgrounds: your own gradient (two colours, linear with angle or radial) and your own image (file or drag and drop, with blur and darken).
+- Inset border (mat) around the capture: width, white / black / glass / custom colour, and separate inner corners.
+- 34 end-to-end checks.
 
 ## 1.0.0 (2026-11-17)
 
