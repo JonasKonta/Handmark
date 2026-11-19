@@ -45,7 +45,9 @@ Copy and paste these into the [Chrome Web Store Developer Dashboard](https://chr
 > • Drawings save automatically and come back when you reopen the page
 > • Tracking parameters are ignored, so the same article from different links finds the same drawings
 > • Saved pages list with previews, export and import backups
-> • Screenshots of the visible area or the whole page, with your drawings
+> • Screenshots of the whole page, the window or an area you draw, with your drawings
+> • Record an area of the page as a video for explainers
+> • Make captures look great: gradient backgrounds, browser frames, rounded corners, shadows and aspect ratios
 >
 > PRIVATE BY DESIGN
 > • No account, no server, no analytics, no network requests

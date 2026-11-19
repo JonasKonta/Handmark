@@ -38,4 +38,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline
 .empty{color:var(--muted);margin:0}
 .keys{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;font-size:12px;color:var(--muted)}
 kbd{justify-self:start;align-self:start;font:600 11px ui-monospace,Menlo,monospace;background:#2a2926;border:1px solid #45423c;border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--text);white-space:nowrap}
+.recbar{display:flex;align-items:center;gap:8px;background:#2a1710;border:1px solid #7a2a10;border-radius:10px;padding:6px 6px 6px 12px}
+.recbar i{width:9px;height:9px;border-radius:50%;background:#FA4101;animation:pulse 1.2s ease-in-out infinite}
+.recbar b{flex:1}
+.recbar span{font-variant-numeric:tabular-nums;color:var(--muted)}
+.recbar .btn{background:#FA4101;border-color:#FA4101;color:#fff}
+@keyframes pulse{50%{opacity:.35}}
 [hidden]{display:none!important}

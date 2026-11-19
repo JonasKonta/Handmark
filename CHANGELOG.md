@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 (2026-11-19)
+
+- New capture menu: **Full page**, **Visible window**, **Select an area** (`Ctrl+Shift+E`) and **Record an area** as video (`Ctrl+Shift+K`). Drawings, the laser and scrolling are included.
+- New **editor** for captures: gradient, colour or transparent background; browser or window frame; aspect ratios (16:9, 4:3, 1:1, 4:5, 9:16); padding, corners and shadow; download PNG, copy, save original; styled video export (MP4 or WebM). The style is remembered.
+- Setting **After a screenshot**: open the editor (default) or save straight away.
+- Recording bar with Stop in the side panel and pop-up; a frame and Stop button on the page, kept outside the recorded area.
+- New permissions: `tabCapture` (record the tab you choose) and `offscreen` (encode the recording in the background).
+- 30 end-to-end checks.
+
 ## 1.0.0 (2026-11-17)
 
 First release.

@@ -13,6 +13,8 @@ Handmark draws on web pages, so it runs next to pages it does not control, some 
 | `storage`, `unlimitedStorage` | Keep drawings on your computer | Local data only |
 | `sidePanel` | Show the controls in Chrome's side panel | None |
 | `downloads` | Save screenshots to Downloads/Handmark | Could create files; rate-limited, fixed file names |
+| `tabCapture` | Record an area of the tab, only after you choose an area | Chrome only allows it on a tab where you clicked the icon or pressed the shortcut |
+| `offscreen` | Encode a recording in a hidden extension page | None; the page exists only while recording |
 | `<all_urls>` (**optional**, off by default) | Only for "Show drawings automatically when I come back" | Script on every page; it only draws its own layer |
 
 There is no `tabs`, `history`, `cookies`, `webRequest` or `clipboard` permission, no `externally_connectable` and no `web_accessible_resources`.
@@ -56,6 +58,10 @@ Every `onMessage` handler requires `sender.id === chrome.runtime.id`, then check
 - Window resize: only for the active tab, at most every 3 s, width clamped to 500–7680 px.
 - Settings page: opened at most every 2 s.
 - Storage: one page's record is capped at 5 MB, 5,000 marks and 20,000 points per mark.
+
+### 7b. Screenshots and recordings
+- Area selection, the Stop button and the editor only accept trusted input. A page cannot start a recording: the worker requires a real tab message, the active tab, a rate limit, and Chrome's own tabCapture rule that the user invoked Handmark on that tab.
+- Captures are kept in the extension's IndexedDB (not readable by pages), pruned after a day, and only saved to disk when you choose. Only the offscreen recorder page may report a finished recording.
 
 ### 8. Keylogging concerns
 The keyboard listener only runs while you have started Handmark on that tab. It ignores text fields, text areas, selects and editable content (including password fields), only reacts to its own shortcut keys, and never stores or sends what you type.

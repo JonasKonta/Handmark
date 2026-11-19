@@ -143,12 +143,84 @@ try {
   check('a page cannot write another site\'s drawings', cross.write && cross.write.error === 'not allowed');
   check('a page cannot read extension storage directly', cross.direct === 'blocked');
 
-  // screenshots
+  // screenshots saved straight away (Settings → After a screenshot → Save straight away)
+  await sw.evaluate(() => chrome.storage.local.set({ settings: { ...HM.DEFAULTS, afterShot: 'save' } }));
+  await wait(300);
   const shots = await sw.evaluate(new Function(`return (async () => { ${activeTab}
-    await startOn(t.id, 'hm:activate'); return [await capture(t, 'visible'), await capture(t, 'full')]; })()`));
+    await startOn(t.id, 'hm:activate'); return [await capture(t, 'visible'), await capture(t, 'full'), await capture(t, 'area', { rect: { x: 100, y: 100, w: 300, h: 200 } })]; })()`));
   await wait(1500);
   const dls = await sw.evaluate(() => chrome.downloads.search({ state: 'complete' }));
-  check('visible and full-page screenshots save', shots.every((r) => r && r.ok) && dls.length >= 2, JSON.stringify(shots));
+  check('window, full-page and area screenshots save', shots.every((r) => r && r.saved) && dls.length >= 3, JSON.stringify(shots));
+  const areaSize = await sw.evaluate(async () => {
+    const all = await chrome.downloads.search({ state: 'complete', orderBy: ['startTime'] });
+    return all.slice(-3).map((d) => d.fileSize); // window, full page, area
+  });
+  check('area screenshot is cropped', areaSize[2] > 0 && areaSize[2] < areaSize[0] && areaSize[0] < areaSize[1], JSON.stringify(areaSize));
+
+  // screenshots open in the editor (the default)
+  await sw.evaluate(() => chrome.storage.local.set({ settings: { ...HM.DEFAULTS } }));
+  await page.bringToFront(); await wait(2200);
+  const editorOpened = ctx.waitForEvent('page', { predicate: (p) => p.url().includes('/editor.html#'), timeout: 10000 });
+  // choose an area by dragging on the page, like a user would
+  await page.keyboard.press('Control+Shift+E'); await wait(200);
+  await page.mouse.move(200, 150); await page.mouse.down(); await page.mouse.move(500, 350, { steps: 6 }); await page.mouse.up();
+  const ed = await editorOpened;
+  await ed.waitForLoadState(); await wait(800);
+  const edInfo = await ed.evaluate(() => { const c = document.getElementById('out'); return { w: c.width, h: c.height, kind: document.getElementById('kind').textContent }; });
+  check('area selection opens the editor with a styled image', edInfo.kind === 'Area' && edInfo.w > 300 && edInfo.h > 200, JSON.stringify(edInfo));
+  await ed.click('#frames button:nth-child(1)'); await ed.click('#ratios button:nth-child(4)'); await wait(300);
+  const sq = await ed.evaluate(() => { const c = document.getElementById('out'); return [c.width, c.height]; });
+  const saved = await sw.evaluate(() => chrome.storage.local.get('shotStyle'));
+  check('editor applies and remembers the style', sq[0] === sq[1] && saved.shotStyle && saved.shotStyle.ratio === '1:1' && saved.shotStyle.frame === 'none', JSON.stringify(sq));
+  const before = (await sw.evaluate(() => chrome.downloads.search({}))).length;
+  await ed.click('#saveBtn'); await wait(1500);
+  const after = await sw.evaluate(() => chrome.downloads.search({}));
+  check('editor downloads the styled PNG', after.length === before + 1, JSON.stringify(after.map((d) => [d.filename, d.state, d.error])));
+  await ed.close();
+
+  // recording an area: Chrome only allows tab capture after the toolbar icon or shortcut was used
+  // on the tab, which a test cannot do, so this checks the message, then the recorder on its own.
+  await page.bringToFront(); await wait(2200);
+  await page.keyboard.press('Control+Shift+K'); await wait(200);
+  await page.mouse.move(100, 100); await page.mouse.down(); await page.mouse.move(500, 400, { steps: 6 }); await page.mouse.up();
+  await wait(1200);
+  const recSt = await sw.evaluate(() => recState());
+  const recErr = await sw.evaluate(new Function(`return (async () => { ${activeTab} await new Promise((r) => setTimeout(r, 2100));
+    return recordStart(t, { x: 10, y: 10, w: 200, h: 100 }, { vw: 1280, vh: 800, dpr: 1 }); })()`));
+  check('recording without an icon click explains what to do', !recSt.recording && /Handmark icon/.test(recErr.error || ''), JSON.stringify(recErr));
+
+  // the recorder: crops a moving test video to the area, encodes it, and the editor opens it
+  const rp = await ctx.newPage();
+  await rp.addInitScript(() => {
+    if (!location.pathname.endsWith('/offscreen.html')) return;
+    navigator.mediaDevices.getUserMedia = async () => {
+      const c = document.createElement('canvas'); c.width = 1280; c.height = 800;
+      const g = c.getContext('2d'); let f = 0;
+      setInterval(() => { f++; g.fillStyle = '#223'; g.fillRect(0, 0, 1280, 800); g.fillStyle = '#FFC702'; g.fillRect(100 + (f * 7) % 300, 120, 80, 80); }, 33);
+      return c.captureStream(30);
+    };
+  });
+  await rp.goto(`chrome-extension://${extId}/offscreen.html`); await wait(500);
+  const recOpened = ctx.waitForEvent('page', { predicate: (p) => p.url().includes('/editor.html#'), timeout: 20000 }).catch(() => null);
+  const recStarted = await sw.evaluate(() => chrome.runtime.sendMessage({ type: 'hm:off-start', streamId: 'test', rect: { x: 100, y: 100, w: 400, h: 240 }, view: { vw: 1280, vh: 800, dpr: 1 }, title: 'Test', url: 'https://example.com/x' }));
+  await wait(2500);
+  await sw.evaluate(() => chrome.runtime.sendMessage({ type: 'hm:off-stop' }));
+  const rv = await recOpened;
+  check('recorder crops to the area', recStarted && recStarted.ok && recStarted.width === 400 && recStarted.height === 240, JSON.stringify(recStarted));
+  if (rv) {
+    await rv.waitForLoadState(); await wait(2500);
+    const v = await rv.evaluate(() => ({ kind: document.getElementById('kind').textContent, w: document.getElementById('out').width, gone: !document.getElementById('gone').hidden, dims: document.getElementById('dims').textContent, save: document.getElementById('saveBtn').textContent }));
+    check('recording opens in the editor as a styled video', v.kind === 'Recording' && v.w > 400 && !v.gone && /video/.test(v.save), JSON.stringify(v));
+    const n0 = (await sw.evaluate(() => chrome.downloads.search({}))).length;
+    await rv.click('#saveBtn');
+    await rv.waitForFunction(() => !document.getElementById('busy').hidden, null, { timeout: 5000 }).catch(() => {});
+    await rv.waitForFunction(() => document.getElementById('busy').hidden, null, { timeout: 20000 }).catch(() => {});
+    await wait(1500);
+    const dl = await sw.evaluate(() => chrome.downloads.search({ orderBy: ['-startTime'] }));
+    check('styled video exports', dl.length === n0 + 1 && dl[0].state === 'complete' && /^video\//.test(dl[0].mime) && dl[0].fileSize > 1000, dl[0] && JSON.stringify([dl[0].mime, dl[0].fileSize]));
+    await rv.close();
+  } else check('recording opens in the editor as a styled video', false, 'no editor tab');
+  await rp.close();
 
   check('no page errors', pageErrors.length === 0, pageErrors.join('; '));
 } catch (e) {

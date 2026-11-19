@@ -22,6 +22,10 @@
     redo: [['path', 'M15 14l5-5-5-5'], ['path', 'M20 9H10a6 6 0 000 12h3']],
     clear: [['path', 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13']],
     shot: [['path', 'M4 8h3l2-3h6l2 3h3v11H4z'], ['circle', 12, 13, 3.5]],
+    full: [['path', 'M7 3h10v18H7z'], ['path', 'M10 7h4M10 11h4M10 15h2']],
+    window: [['path', 'M3 5h18v14H3z'], ['path', 'M3 9h18']],
+    area: [['path', 'M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4']],
+    rec: [['circle', 12, 12, 8], ['circle', 12, 12, 3.5]],
     settings: [['circle', 12, 12, 3], ['path', 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1']],
   };
   const TOOL_INFO = [
@@ -68,9 +72,14 @@
 .hmc.horiz .lbl{display:none}
 .hmc.horiz .row{flex-wrap:nowrap;gap:2px}
 .hmc .menu{position:absolute;z-index:5;background:#1d1c1a;border:1px solid #3c3a35;border-radius:10px;padding:6px;display:grid;min-width:200px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
-.hmc .menu button{text-align:left;padding:8px 10px;border-radius:6px;color:#f3eee4;display:flex;justify-content:space-between;gap:12px}
+.hmc .menu button{text-align:left;padding:8px 10px;border-radius:6px;color:#f3eee4;display:flex;align-items:center;gap:10px}
 .hmc .menu button:hover{background:#2f2d29}
-.hmc .menu span{color:#a29c90}
+.hmc .menu b{flex:1;font-weight:600}
+.hmc .menu span{color:#a29c90;font-size:11.5px}
+.hmc .menu svg{width:16px;height:16px;color:#FFC702;flex:none}
+.hmc .menu .sep{height:1px;background:#3c3a35;margin:4px 2px}
+.hmc .menu .rec svg{color:#FA4101}
+.hmc .t.recording{color:#FA4101}
 `;
 
   // opts: { layout: 'vertical'|'bar', onSetting(partial), onAction(name), onOpenSettings() }
@@ -121,20 +130,31 @@
       tbtn('redo', 'Redo (Ctrl+Shift+Z)', () => opts.onAction('redo')),
       tbtn('clear', 'Clear page (C)', () => opts.onAction('clear')),
     );
-    let menu = null;
+    let menu = null, recording = false;
     const closeMenu = () => { if (menu) { menu.remove(); menu = null; } };
     const shotBtn = tbtn('shot', 'Screenshot', () => {
       if (menu) { closeMenu(); return; }
       menu = el('div', 'menu');
-      for (const [k, label, keys] of [['shot-visible', 'Visible area', 'Ctrl+Shift+S'], ['shot-full', 'Full page', 'Ctrl+Shift+F']]) {
-        const b = el('button'); b.type = 'button'; b.append(el('b', null, label), el('span', null, keys));
+      const items = [
+        ['shot-full', 'full', 'Full page', 'Ctrl+Shift+F'],
+        ['shot-visible', 'window', 'Visible window', 'Ctrl+Shift+S'],
+        ['shot-area', 'area', 'Select an area', 'Ctrl+Shift+E'],
+        null,
+        ['record', 'rec', recording ? 'Stop recording' : 'Record an area (video)', 'Ctrl+Shift+K'],
+      ];
+      for (const it of items) {
+        if (!it) { menu.appendChild(el('div', 'sep')); continue; }
+        const [k, ic, label, keys] = it;
+        const b = el('button', k === 'record' ? 'rec' : null); b.type = 'button';
+        b.append(icon(doc, ic), el('b', null, label), el('span', null, keys));
         b.addEventListener('click', (e) => { if (!e.isTrusted) return; closeMenu(); opts.onAction(k); });
         menu.appendChild(b);
       }
       root.appendChild(menu);
-      menu.style.left = Math.max(0, shotBtn.offsetLeft - 120) + 'px';
+      menu.style.left = Math.max(0, Math.min(shotBtn.offsetLeft - 120, root.clientWidth - 250)) + 'px';
       menu.style.top = (shotBtn.offsetTop + shotBtn.offsetHeight + 6) + 'px';
     });
+    shotBtn.title = 'Screenshot or record (styled in the editor)';
     pageRow.append(shotBtn, tbtn('settings', 'Settings', () => opts.onOpenSettings()));
     doc.addEventListener('click', (e) => { if (menu && !e.composedPath().includes(menu) && !e.composedPath().includes(shotBtn)) closeMenu(); }, true);
 
@@ -150,8 +170,13 @@
       fadeBtn.setAttribute('aria-pressed', String(s.fade));
       fadeBtn.title = s.fade ? `Fade on: new marks disappear after ${s.fadeMs / 1000} s (G)` : 'Fade new marks (G)';
     }
+    function setRecording(on) {
+      recording = !!on; closeMenu();
+      shotBtn.classList.toggle('recording', recording);
+      shotBtn.title = recording ? 'Recording… open to stop' : 'Screenshot or record (styled in the editor)';
+    }
     update(HM.DEFAULTS);
-    return { el: root, update, closeMenu };
+    return { el: root, update, closeMenu, setRecording };
   }
 
   globalThis.HandmarkControls = Object.freeze({ build, CSS, icon });

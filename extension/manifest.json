@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Handmark",
   "short_name": "Handmark",
-  "version": "1.0.0",
-  "description": "Draw on any webpage like it's paper: hand-drawn marker, arrows, highlighter, notes and a laser pointer. Drawings stay on the page.",
+  "version": "1.1.0",
+  "description": "Draw on any webpage like it's paper, then capture it: styled screenshots of the page, window or an area, and screen recordings of an area.",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon-16.png",
@@ -31,7 +31,9 @@
     "storage",
     "unlimitedStorage",
     "sidePanel",
-    "downloads"
+    "downloads",
+    "offscreen",
+    "tabCapture"
   ],
   "optional_host_permissions": [
     "<all_urls>"

@@ -22,8 +22,9 @@
 
   const DEFAULTS = Object.freeze({
     tool: 'brush', color: '#FFC702', custom: '#2F6BFF', size: 2, stab: 1,
-    fade: false, fadeMs: 5000, layout: 'side', keepDefault: true,
+    fade: false, fadeMs: 5000, layout: 'side', keepDefault: true, afterShot: 'editor',
   });
+  const AFTER_SHOT = Object.freeze(['editor', 'save']);
 
   const LIMITS = Object.freeze({
     strokesPerPage: 5000,
@@ -74,6 +75,7 @@
     if (FADE_TIMES.includes(s.fadeMs)) o.fadeMs = s.fadeMs;
     if (LAYOUTS.includes(s.layout)) o.layout = s.layout;
     o.keepDefault = s.keepDefault !== false;
+    if (AFTER_SHOT.includes(s.afterShot)) o.afterShot = s.afterShot;
     return o;
   }
 
@@ -125,7 +127,7 @@
   }
 
   globalThis.HM = Object.freeze({
-    COLORS, SIZES, TOOLS, STROKE_TOOLS, LAYOUTS, FADE_TIMES, COLOR_RE, KEY_PREFIX, DEFAULTS, LIMITS,
+    COLORS, SIZES, TOOLS, STROKE_TOOLS, LAYOUTS, AFTER_SHOT, FADE_TIMES, COLOR_RE, KEY_PREFIX, DEFAULTS, LIMITS,
     normalizeUrl, isOpenableUrl, pageKey, hashKey, stableJson, isColor, sanitizeSettings, sanitizeStroke, sanitizePage,
   });
 })();

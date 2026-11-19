@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handmark editor</title>
+<link rel="icon" href="icons/icon-32.png">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header>
+  <img src="icons/icon-32.png" alt="">
+  <div class="ttl"><b id="kind">Screenshot</b><span id="from"></span></div>
+  <div class="acts">
+    <button class="btn" id="copyBtn" type="button">Copy</button>
+    <button class="btn" id="origBtn" type="button">Save original</button>
+    <button class="btn primary" id="saveBtn" type="button">Download PNG</button>
+  </div>
+</header>
+<main>
+  <section class="stage" id="stage">
+    <div class="wrap" id="wrap"><canvas id="out" aria-label="Styled preview"></canvas></div>
+    <div class="vctl" id="vctl" hidden>
+      <button class="icon" id="playBtn" type="button" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="playIcon" d="M8 5l11 7-11 7z"/></svg></button>
+      <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Position">
+      <span id="vtime">0:00</span>
+    </div>
+    <div class="dims" id="dims"></div>
+    <div class="busy" id="busy" hidden>
+      <div class="card">
+        <b id="busyMsg">Exporting styled video…</b>
+        <div class="bar"><i id="busyBar"></i></div>
+        <span class="sub">The video plays through once while it is encoded. Keep this tab open.</span>
+        <button class="btn" id="cancelBtn" type="button">Cancel</button>
+      </div>
+    </div>
+    <p class="gone" id="gone" hidden>This capture is no longer available. Captures are kept on this computer for a day.</p>
+  </section>
+  <aside>
+    <div class="grp">
+      <h2>Background</h2>
+      <div class="swatches" id="bgs"></div>
+    </div>
+    <div class="grp">
+      <h2>Frame</h2>
+      <div class="seg" id="frames"></div>
+    </div>
+    <div class="grp">
+      <h2>Aspect ratio</h2>
+      <div class="seg chips" id="ratios"></div>
+    </div>
+    <div class="grp">
+      <label class="slider"><span>Padding</span><output id="padOut"></output><input type="range" id="pad" min="0" max="100"></label>
+      <label class="slider"><span>Corners</span><output id="radiusOut"></output><input type="range" id="radius" min="0" max="40"></label>
+      <label class="slider"><span>Shadow</span><output id="shadowOut"></output><input type="range" id="shadow" min="0" max="100"></label>
+    </div>
+    <div class="grp">
+      <div class="row"><button class="btn" id="plainBtn" type="button">No styling</button><button class="btn" id="resetBtn" type="button">Reset style</button></div>
+      <p class="note">Your style is remembered for the next screenshot and recording. Everything stays on this computer.</p>
+    </div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="media.js"></script>
+<script src="beautify.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

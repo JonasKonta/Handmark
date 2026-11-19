@@ -13,6 +13,7 @@
   <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings"></button>
 </header>
 <main>
+  <div class="recbar" id="recBar" hidden><i></i><b>Recording</b><span id="recTime">0:00</span><button class="btn" id="recStop" type="button">Stop</button></div>
   <section class="status" id="status" aria-live="polite">
     <div class="where" id="where">Checking this page…</div>
     <div class="sub" id="sub"></div>
@@ -48,6 +49,10 @@
       <kbd>1 2 3</kbd><span>Size</span>
       <kbd>S G</kbd><span>Smoothing · Fade</span>
       <kbd>Ctrl+Z</kbd><span>Undo (Shift for redo) · C clears</span>
+      <kbd>Ctrl+Shift+F</kbd><span>Screenshot: full page</span>
+      <kbd>Ctrl+Shift+S</kbd><span>Screenshot: visible window</span>
+      <kbd>Ctrl+Shift+E</kbd><span>Screenshot: select an area</span>
+      <kbd>Ctrl+Shift+K</kbd><span>Record an area · again to stop</span>
     </div>
   </section>
 </main>

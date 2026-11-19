@@ -28,6 +28,7 @@
     strokes: [], undo: [], redo: [],
     lastWritten: null,
     capturing: false,
+    recording: false,   // an area of this tab is being recorded
     widthNoticeDismissed: false,
   };
 
@@ -55,6 +56,18 @@
 .notice .acts{display:flex;gap:8px;justify-content:flex-end}
 .notice button{font:600 12.5px system-ui,sans-serif;border-radius:7px;padding:6px 10px;cursor:pointer;border:1px solid #3c3a35;background:transparent;color:#f3eee4}
 .notice button.primary{background:#FFC702;color:#141312;border-color:#FFC702}
+.sel{position:fixed;inset:0;pointer-events:auto;cursor:crosshair;background:rgba(20,19,18,.38)}
+.sel.has{background:transparent}
+.selbox{position:fixed;border:2px solid #FFC702;box-shadow:0 0 0 200vmax rgba(20,19,18,.45);border-radius:3px;box-sizing:border-box}
+.selsize{position:absolute;left:-2px;top:-26px;background:#FFC702;color:#141312;font:600 11px ui-monospace,Menlo,monospace;padding:3px 7px;border-radius:5px;white-space:nowrap}
+.selhint{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#1d1c1a;color:#f3eee4;border:1px solid #3c3a35;border-radius:999px;padding:8px 16px;font:500 13px system-ui,sans-serif;pointer-events:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.selhint b{color:#FFC702}
+.recframe{position:fixed;pointer-events:none;outline:2px dashed #FA4101;outline-offset:3px;border-radius:2px}
+.recpill{position:fixed;pointer-events:auto;display:flex;align-items:center;gap:10px;background:#1d1c1a;color:#f3eee4;border:1px solid #3c3a35;border-radius:999px;padding:5px 5px 5px 12px;font:600 12.5px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap}
+.recpill i{width:9px;height:9px;border-radius:50%;background:#FA4101;animation:hmpulse 1.2s ease-in-out infinite}
+.recpill span{font-variant-numeric:tabular-nums;min-width:36px}
+.recpill button{font:600 12px system-ui,sans-serif;border:0;border-radius:999px;padding:6px 12px;background:#FA4101;color:#fff;cursor:pointer}
+@keyframes hmpulse{50%{opacity:.35}}
 .textin{position:fixed;pointer-events:auto;font-family:${FONT};font-weight:700;background:rgba(255,255,255,.04);border:1px dashed rgba(127,127,127,.7);outline:none;padding:0 4px;min-width:80px;line-height:1.1}
 `;
 
@@ -139,7 +152,7 @@
 
   let toastTimer = 0;
   function toast(msg) {
-    if (!ui || st.capturing) return;
+    if (!ui || st.capturing || st.recording) return;
     ui.toast.textContent = msg; ui.toast.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { if (ui) ui.toast.hidden = true; }, 2400);
   }
@@ -523,7 +536,91 @@
       chrome.runtime.sendMessage({ type: 'hm:capture', mode: name === 'shot-full' ? 'full' : 'visible' })
         .then((r) => { if (r && r.error) toast(r.error); })
         .catch(() => toast('Screenshot failed'));
+    } else if (name === 'shot-area') {
+      selectArea('shot').then((rect) => rect && chrome.runtime.sendMessage({ type: 'hm:capture', mode: 'area', rect }))
+        .then((r) => { if (r && r.error) toast(r.error); })
+        .catch(() => toast('Screenshot failed'));
+    } else if (name === 'record') {
+      if (st.recording) { chrome.runtime.sendMessage({ type: 'hm:record-stop' }).catch(() => {}); return; }
+      selectArea('video').then(async (rect) => {
+        if (!rect) return;
+        const r = await chrome.runtime.sendMessage({ type: 'hm:record-start', rect, view: { vw: innerWidth, vh: innerHeight, dpr: window.devicePixelRatio || 1 } });
+        if (!r || r.error) { toast(r ? r.error : 'Recording failed'); return; }
+        showRecording(r.rect);
+      }).catch(() => toast('Recording failed'));
     }
+  }
+
+  // ---------- choosing an area (screenshots and recordings) ----------
+  let selecting = null;
+  function selectArea(kind) {
+    ensureUI(); commitText();
+    if (selecting) selecting.finish(null);
+    if (st.recording && kind === 'video') return Promise.resolve(null);
+    ui.toast.hidden = true; clearTimeout(toastTimer);
+    return new Promise((resolve) => {
+      const layer = document.createElement('div'); layer.className = 'sel';
+      const hint = document.createElement('div'); hint.className = 'selhint';
+      const b = document.createElement('b'); b.textContent = kind === 'video' ? 'Record an area: ' : 'Screenshot an area: ';
+      hint.append(b, document.createTextNode('drag to select · Esc to cancel'));
+      const box = document.createElement('div'); box.className = 'selbox'; box.hidden = true;
+      const size = document.createElement('div'); size.className = 'selsize'; box.appendChild(size);
+      layer.append(box, hint);
+      ui.root.appendChild(layer);
+      let a = null, rect = null;
+      const finish = (r) => { if (!selecting) return; selecting = null; layer.remove(); resolve(r); };
+      selecting = { finish };
+      layer.addEventListener('pointerdown', (e) => {
+        if (!e.isTrusted || e.button !== 0) return;
+        e.preventDefault(); a = { x: e.clientX, y: e.clientY }; layer.setPointerCapture(e.pointerId);
+      });
+      layer.addEventListener('pointermove', (e) => {
+        if (!e.isTrusted || !a) return;
+        const x = Math.max(0, Math.min(a.x, e.clientX)), y = Math.max(0, Math.min(a.y, e.clientY));
+        const w = Math.min(innerWidth, Math.max(a.x, e.clientX)) - x, h = Math.min(innerHeight, Math.max(a.y, e.clientY)) - y;
+        rect = { x, y, w, h };
+        layer.classList.add('has'); box.hidden = false; hint.hidden = true;
+        Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+        size.textContent = `${Math.round(w)} × ${Math.round(h)}`;
+        size.style.top = y < 30 ? '4px' : '-26px'; size.style.left = y < 30 ? '4px' : '-2px';
+      });
+      layer.addEventListener('pointerup', (e) => {
+        if (!e.isTrusted || !a) return;
+        a = null;
+        if (rect && rect.w >= 10 && rect.h >= 10) finish(rect);
+        else { rect = null; box.hidden = true; hint.hidden = false; layer.classList.remove('has'); }
+      });
+      layer.addEventListener('contextmenu', (e) => { e.preventDefault(); finish(null); });
+    }).then(async (r) => { if (r) await frames(); return r; });
+  }
+
+  // ---------- recording indicator: a frame just outside the area and a Stop button ----------
+  let recUI = null;
+  function showRecording(r) {
+    ensureUI(); hideRecording();
+    st.recording = true;
+    if (ui) { ui.toast.hidden = true; ui.notice.hidden = true; }
+    const frame = document.createElement('div'); frame.className = 'recframe';
+    Object.assign(frame.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+    const pill = document.createElement('div'); pill.className = 'recpill';
+    const dot = document.createElement('i'), time = document.createElement('span'), stop = document.createElement('button');
+    time.textContent = '0:00'; stop.type = 'button'; stop.textContent = 'Stop';
+    stop.addEventListener('click', (e) => { if (e.isTrusted) chrome.runtime.sendMessage({ type: 'hm:record-stop' }).catch(() => {}); });
+    pill.append(dot, time, stop);
+    ui.root.append(frame, pill);
+    // keep the Stop button outside the recorded area when there is room
+    const ph = 40, below = r.y + r.h + 12, above = r.y - ph - 12;
+    pill.style.top = (below + ph <= innerHeight ? below : above >= 0 ? above : Math.max(8, innerHeight - ph - 8)) + 'px';
+    pill.style.left = Math.max(8, Math.min(innerWidth - 170, r.x + r.w - 160)) + 'px';
+    const t0 = Date.now();
+    const timer = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); time.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 500);
+    recUI = { frame, pill, timer };
+    ui.controls.setRecording(true);
+    notifyPanel();
+  }
+  function hideRecording() {
+    if (recUI) { clearInterval(recUI.timer); recUI.frame.remove(); recUI.pill.remove(); recUI = null; }
+    if (st.recording) { st.recording = false; if (ui) ui.controls.setRecording(false); notifyPanel(); }
   }
 
   // keyboard: only while a session is running, only real key presses, never inside text fields
@@ -535,6 +632,7 @@
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   }
   window.addEventListener('keydown', (e) => {
+    if (selecting && e.isTrusted && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); selecting.finish(null); return; }
     // our own note box lives in a closed shadow root, so check it directly
     if (!st.active || !e.isTrusted || textEl || isEditable(e) || e.repeat) return;
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
@@ -542,6 +640,8 @@
     if (mod && !e.altKey && k === 'z' && st.drawing) { e.shiftKey ? redo() : undo(); }
     else if (mod && e.shiftKey && !e.altKey && k === 's') runAction('shot-visible');
     else if (mod && e.shiftKey && !e.altKey && k === 'f') runAction('shot-full');
+    else if (mod && e.shiftKey && !e.altKey && k === 'e') runAction('shot-area');
+    else if (mod && e.shiftKey && !e.altKey && k === 'k') runAction('record');
     else if (mod || e.altKey) handled = false;
     else if (k === 'f') toggleDrawing();
     else if (k === 'escape') { if (st.drawing) setSettings({ tool: 'through' }); else handled = false; }
@@ -563,7 +663,7 @@
     return {
       active: st.active, drawing: st.drawing, url: st.url, title: (document.title || '').slice(0, 200),
       count: savedStrokes().length, keep: st.keep, vwSaved: st.vwSaved, vw: Math.round(innerWidth),
-      outerWidth: Math.round(window.outerWidth), mismatch: widthMismatch(), incognito: INCOGNITO,
+      outerWidth: Math.round(window.outerWidth), mismatch: widthMismatch(), incognito: INCOGNITO, recording: st.recording,
     };
   }
   const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -578,13 +678,16 @@
       case 'hm:toggle-drawing': toggleDrawing(); reply(status()); return;
       case 'hm:status': ready.then(() => reply(status())); return true;
       case 'hm:action':
-        if (['undo', 'redo', 'clear'].includes(msg.name)) runAction(msg.name);
+        if (['undo', 'redo', 'clear', 'shot-area', 'record'].includes(msg.name)) runAction(msg.name);
         reply(status()); return;
       case 'hm:set-keep':
         if (typeof msg.keep === 'boolean') { st.keep = msg.keep; save().then(() => reply(status())); return true; }
         reply(status()); return;
+      case 'hm:rec-ended':
+        hideRecording(); reply(true); return;
       case 'hm:capture-prepare':
         commitText();
+        if (selecting) selecting.finish(null);
         st.capturing = true; captureRestore = { x: window.scrollX, y: window.scrollY };
         if (ui) { ui.toast.hidden = true; ui.notice.hidden = true; }
         refreshUI();

@@ -72,8 +72,31 @@ Your drawings stay on the page and come back when you reopen it, weeks later too
 - Saved pages list with previews, Open and Delete.
 - Per-page "Keep drawings" switch.
 - Export and import of all drawings as a backup file.
-- Screenshots of the visible area or the full page, including your drawings, saved to `Downloads/Handmark`.
+- Screenshots and recordings, including your drawings (see below).
 - Undo, redo and clear page.
+
+**Screenshots and recordings**
+
+Open the camera button in the controls, or use a shortcut:
+
+| Capture | Shortcut | What you get |
+|---|---|---|
+| Full page | `Ctrl+Shift+F` | The whole page, top to bottom, stitched from screens |
+| Visible window | `Ctrl+Shift+S` | Everything you can see in the tab |
+| Select an area | `Ctrl+Shift+E` | Drag a rectangle over the page; `Esc` cancels |
+| Record an area (video) | `Ctrl+Shift+K` | Drag a rectangle, then everything in it is recorded (scrolling, your marker, the laser) until you press **Stop** or the shortcut again. Up to 10 minutes. |
+
+Captures open in the **editor**, where you can make them presentable:
+- **Background:** 10 gradients, a custom colour, or transparent
+- **Frame:** a browser window (light or dark, with the site's address) or a plain window with traffic lights
+- **Aspect ratio:** auto, 16:9, 4:3, 1:1, 4:5 or 9:16 (for slides and social posts)
+- **Padding, rounded corners and shadow** sliders
+- **Download PNG**, **Copy** to the clipboard, or **Save original**
+- For recordings: preview, **Export styled video** (MP4 where Chrome supports it, otherwise WebM) or **Save original video**
+
+Your style is remembered for the next capture. To skip the editor for screenshots, choose **Settings → After a screenshot → Save straight away**. Files go to `Downloads/Handmark`.
+
+Recording needs one click on the Handmark icon (or `Alt+Shift+D`) on that tab first: Chrome only lets extensions record a tab the user has explicitly invoked them on.
 
 ---
 
@@ -126,8 +149,10 @@ Single-key shortcuts only work while Handmark is running on the tab, and never w
 | `G` | Fade on / off |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
 | `C` | Clear this page (undo brings it back) |
-| `Ctrl+Shift+S` | Screenshot of the visible area |
+| `Ctrl+Shift+S` | Screenshot of the visible window |
 | `Ctrl+Shift+F` | Full-page screenshot |
+| `Ctrl+Shift+E` | Screenshot of an area you select |
+| `Ctrl+Shift+K` | Record an area as video (press again to stop) |
 | `Enter` / `Esc` (in a note) | Place the note / cancel it |
 
 On a Mac, use `Cmd` instead of `Ctrl`.
@@ -243,7 +268,17 @@ flowchart LR
 **Screenshots:**
 - **Visible area:** the page hides Handmark's controls (`hm:capture-prepare`), then the worker calls `chrome.tabs.captureVisibleTab`.
 - **Full page:** the worker scrolls the page one screen at a time (`hm:capture-scroll`) and captures each screen, waiting about 0.6 s between captures (Chrome's limit). It then stitches the screens on an `OffscreenCanvas`.
-- The height is capped at 40 screens or 30,000 px. The result is saved with `chrome.downloads`.
+- The height is capped at 40 screens or 30,000 px.
+- **Area:** the page shows a selection layer in its shadow root; after you drag, the worker captures the visible tab and crops it.
+- The image is stored in the extension's own IndexedDB (`media.js`, kept for a day, at most 12 items) and `editor.html#<id>` opens next to the tab. With "Save straight away" it goes to `chrome.downloads` instead.
+
+**Recordings:**
+- The worker gets a stream id with `chrome.tabCapture.getMediaStreamId` and opens an offscreen document (`offscreen.html`).
+- The offscreen document crops every captured frame to the chosen area (`MediaStreamTrackProcessor` → canvas → `MediaStreamTrackGenerator`) and encodes it with `MediaRecorder`.
+- The page shows a dashed frame just outside the area and a Stop button, so neither appears in the video.
+- When it stops, the video is stored locally and opens in the editor. **Export styled video** plays it once while drawing every frame with the chosen style onto a canvas, which is recorded again.
+
+**Styling** (`beautify.js`) is one renderer used for the preview, the PNG and the video, so they always match.
 
 ---
 
@@ -264,6 +299,10 @@ handmark/
 │   ├── panel.css
 │   ├── options.html
 │   ├── options.js
+│   ├── editor.html, editor.css, editor.js
+│   ├── beautify.js
+│   ├── media.js
+│   ├── offscreen.html, offscreen.js
 │   ├── fonts/
 │   │   ├── caveat-700-latin.woff2
 │   │   ├── caveat-700-latin-ext.woff2
@@ -360,6 +399,18 @@ The panel follows the active tab and talks to the page with `chrome.tabs.sendMes
 ### `extension/options.html`, `extension/options.js`
 The settings page: controls layout, fade time, keep-by-default, the "show drawings automatically" switch (requests or removes the optional permission), a link to Chrome's shortcut settings, saved drawings with search, export, import and delete all, and a privacy summary.
 
+### `extension/editor.html`, `extension/editor.css`, `extension/editor.js`
+The capture editor: background, frame, aspect ratio, padding, corners and shadow; download, copy, save original; video preview and styled video export.
+
+### `extension/beautify.js`
+`HMStyle`: the style presets, `sanitizeStyle` and the canvas renderer shared by the editor's preview and exports.
+
+### `extension/media.js`
+`HMMedia`: a small IndexedDB store for captures on their way to the editor. Old items are pruned automatically.
+
+### `extension/offscreen.html`, `extension/offscreen.js`
+The recorder. Exists only while a recording is running.
+
 ### `extension/fonts/`
 Caveat Bold in two subsets (Latin, and Latin Extended for diacritics), downloaded from Google Fonts and bundled so no request ever leaves the browser. `OFL.txt` is the font's licence (SIL Open Font License 1.1).
 
@@ -375,7 +426,7 @@ End-to-end tests with Playwright. They start a local web server, load a test cop
 - restoring after reopening the page
 - the malicious import file is cleaned
 - site isolation
-- both screenshot types
+- full-page, window and area screenshots, the editor (style, remembered style, download), and the recorder (crop, editor, styled export)
 
 ### `tests/fixtures/article.html`
 A long test page with paragraphs and a text field.
@@ -528,6 +579,8 @@ Everything for the store is in [`store/`](store):
 - Per-site colour presets
 - Optional sync between computers through a user-chosen file or cloud folder
 - Translations of the interface
+- Narration (microphone) and tab sound in recordings
+- Crop and blur tools in the editor
 
 ---
 

@@ -11,7 +11,9 @@
     for (const r of document.querySelectorAll('input[name=layout]')) r.checked = r.value === settings.layout;
     $('fadeMs').value = String(settings.fadeMs);
     $('keepDefault').checked = settings.keepDefault;
+    for (const r of document.querySelectorAll('input[name=afterShot]')) r.checked = r.value === settings.afterShot;
   }
+  for (const r of document.querySelectorAll('input[name=afterShot]')) r.addEventListener('change', () => save({ afterShot: r.value }));
   for (const r of document.querySelectorAll('input[name=layout]')) r.addEventListener('change', () => save({ layout: r.value }));
   $('fadeMs').addEventListener('change', (e) => save({ fadeMs: Number(e.target.value) }));
   $('keepDefault').addEventListener('change', (e) => save({ keepDefault: e.target.checked }));

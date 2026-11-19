@@ -32,7 +32,16 @@
     if (name === 'shot-visible' || name === 'shot-full') {
       setMsg('Taking screenshot…');
       const r = await chrome.runtime.sendMessage({ type: 'hm:capture', mode: name === 'shot-full' ? 'full' : 'visible', tabId });
-      setMsg(r && r.error ? r.error : r && r.ok ? 'Saved to Downloads/Handmark' : 'Screenshot failed');
+      setMsg(r && r.error ? r.error : r && r.saved ? 'Saved to Downloads/Handmark' : r && r.editor ? 'Opened in the editor' : 'Screenshot failed');
+      return;
+    }
+    if (name === 'record' && rec.recording) { chrome.runtime.sendMessage({ type: 'hm:record-stop' }); return; }
+    if (name === 'shot-area' || name === 'record') {
+      // the area is chosen on the page, so Handmark has to be running there
+      if (!status) { const r = await chrome.runtime.sendMessage({ type: 'hm:start', tabId }); if (r && r.error) { setMsg(r.error); return; } }
+      status = await sendTab({ type: 'hm:action', name });
+      setMsg(status ? (name === 'record' ? 'Drag over the page to choose what to record' : 'Drag over the page to choose an area') : 'Start Handmark on this page first');
+      render();
       return;
     }
     status = await sendTab({ type: 'hm:action', name });
@@ -110,6 +119,23 @@
     if (changes.settings) { settings = HM.sanitizeSettings(changes.settings.newValue); controls.update(settings); }
     if (Object.keys(changes).some((k) => k.startsWith(HM.KEY_PREFIX))) renderSaved();
   });
+  // recording state, shown as a bar with a Stop button
+  let rec = { recording: false }, recTimer = 0;
+  function renderRec() {
+    $('recBar').hidden = !rec.recording;
+    controls.setRecording(rec.recording);
+    clearInterval(recTimer);
+    if (!rec.recording) return;
+    const tick = () => { const s = Math.max(0, Math.floor((Date.now() - rec.started) / 1000)); $('recTime').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+    tick(); recTimer = setInterval(tick, 500);
+  }
+  $('recStop').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'hm:record-stop' }));
+  chrome.runtime.onMessage.addListener((msg, sender) => {
+    if (sender.id !== chrome.runtime.id || !msg || msg.type !== 'hm:rec-state' || sender.tab) return;
+    rec = { recording: !!msg.recording, started: Number(msg.started) || Date.now() };
+    renderRec();
+    if (!rec.recording) setMsg('Recording finished · opened in the editor');
+  });
   chrome.runtime.onMessage.addListener((msg, sender) => {
     if (sender.id !== chrome.runtime.id || !msg || msg.type !== 'hm:changed') return;
     if (sender.tab && sender.tab.id === tabId) refresh();
@@ -121,6 +147,8 @@
     const got = await chrome.storage.local.get('settings');
     settings = HM.sanitizeSettings(got.settings);
     controls.update(settings);
+    const rs = await chrome.runtime.sendMessage({ type: 'hm:rec-state' }).catch(() => null);
+    if (rs) { rec = { recording: !!rs.recording, started: Number(rs.started) || Date.now() }; renderRec(); }
     await refresh();
     // The pop-up opens from the toolbar icon, which gives Handmark access to this tab: start right away.
     if (MODE === 'popup' && (!status || !status.active)) {

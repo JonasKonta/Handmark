@@ -45,6 +45,12 @@ li b{color:var(--text)}
   </div>
 
   <div class="card">
+    <h3>After a screenshot</h3>
+    <label class="opt"><input type="radio" name="afterShot" value="editor"><div><b>Open the editor</b><span>Add a background, a browser or window frame, rounded corners and a shadow, then download or copy it.</span></div></label>
+    <label class="opt"><input type="radio" name="afterShot" value="save"><div><b>Save straight away</b><span>The plain screenshot goes to Downloads/Handmark. Recordings always open in the editor.</span></div></label>
+  </div>
+
+  <div class="card">
     <h3>Show drawings automatically when I come back</h3>
     <p>By default Handmark only touches a page after you click its icon or press the shortcut, and your drawings come back when you do. Turn this on to see them as soon as a page opens. Chrome will ask to let Handmark “read and change data on all websites”: Handmark only uses this to draw its own layer and never reads, changes or sends page content.</p>
     <label class="switch"><span id="autoLabel">Off</span><input type="checkbox" id="auto"></label>
@@ -68,7 +74,7 @@ li b{color:var(--text)}
     <ul>
       <li><b>Everything stays on this computer.</b> Drawings are kept in Chrome’s extension storage. Handmark has no server, no account, no analytics and makes no network requests.</li>
       <li><b>Incognito windows are never saved.</b> If you allow Handmark in incognito, drawings there disappear when you close the tab.</li>
-      <li><b>Screenshots</b> go straight to your Downloads/Handmark folder.</li>
+      <li><b>Screenshots and recordings</b> are kept on this computer only: for up to a day in Handmark’s own storage so the editor can open them, and in your Downloads/Handmark folder when you save them.</li>
       <li><b>Backups</b> are plain files you control. They contain the addresses and titles of pages you drew on.</li>
     </ul>
   </div>

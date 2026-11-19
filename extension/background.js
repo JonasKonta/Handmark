@@ -1,7 +1,7 @@
 // Handmark: service worker. Starts Handmark on a tab, opens the side panel,
-// takes screenshots and manages the optional "restore on revisit" permission.
+// takes screenshots and recordings, and manages the optional "restore on revisit" permission.
 'use strict';
-importScripts('common.js');
+importScripts('common.js', 'media.js');
 
 const SCRIPT_FILES = ['common.js', 'controls.js', 'content.js'];
 const AUTO_ID = 'handmark-auto-restore';
@@ -116,19 +116,57 @@ async function blobToDataUrl(blob) {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let s = '';
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-  return 'data:image/png;base64,' + btoa(s);
+  return `data:${blob.type || 'image/png'};base64,` + btoa(s);
 }
-async function capture(tab, mode) {
+const SHOT_NAMES = { visible: 'window', full: 'fullpage', area: 'area', video: 'recording' };
+
+// Open the editor next to the tab, or save straight to Downloads/Handmark (Settings → After a capture).
+async function deliver(tab, kind, blob, mode, direct) {
+  const s = await loadSettings();
+  if (kind === 'image' && (direct || s.afterShot === 'save')) {
+    await chrome.downloads.download({ url: await blobToDataUrl(blob), filename: `Handmark/handmark-${SHOT_NAMES[mode]}-${stamp()}.png`, saveAs: false });
+    return { ok: true, saved: true };
+  }
+  const id = await HMMedia.put({ kind, blob, mime: blob.type, title: tab.title || '', url: tab.url || '', mode });
+  const where = { url: chrome.runtime.getURL('editor.html#' + id) };
+  if (Number.isInteger(tab.index)) { where.index = tab.index + 1; where.openerTabId = tab.id; where.windowId = tab.windowId; }
+  await chrome.tabs.create(where);
+  return { ok: true, editor: true };
+}
+
+// A rectangle in CSS pixels inside the viewport, checked and clamped.
+function cleanRect(r, vw, vh) {
+  if (!r || typeof r !== 'object') return null;
+  const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
+  let x = n(r.x), y = n(r.y), w = n(r.w), h = n(r.h);
+  if ([x, y, w, h].some(Number.isNaN)) return null;
+  x = Math.max(0, Math.min(vw, x)); y = Math.max(0, Math.min(vh, y));
+  w = Math.min(vw - x, w); h = Math.min(vh - y, h);
+  return w >= 8 && h >= 8 ? { x, y, w, h } : null;
+}
+
+// mode: 'visible' (the whole window), 'full' (the whole page) or 'area' (opts.rect, chosen on the page)
+async function capture(tab, mode, opts = {}) {
   if (capturing) return { error: 'A screenshot is already being taken' };
   capturing = true;
   let prep = null;
   try {
     prep = await chrome.tabs.sendMessage(tab.id, { type: 'hm:capture-prepare' }).catch(() => null);
-    let url;
-    if (mode === 'visible' || !prep) {
-      if (mode === 'full' && !prep) return { error: 'Start Handmark on this page first to take a full-page screenshot' };
+    let blob;
+    if (mode === 'visible' || mode === 'area' || !prep) {
+      if (mode !== 'visible' && !prep) return { error: 'Start Handmark on this page first' };
       await sleep(60);
-      url = await captureVisible(tab.windowId);
+      const shot = await (await fetch(await captureVisible(tab.windowId))).blob();
+      if (mode === 'area') {
+        const r = cleanRect(opts.rect, prep.vw, prep.vh);
+        if (!r) return { error: 'Select a larger area' };
+        const bmp = await createImageBitmap(shot);
+        const k = bmp.width / Math.max(1, prep.vw);
+        const w = Math.max(1, Math.round(r.w * k)), h = Math.max(1, Math.round(r.h * k));
+        const c = new OffscreenCanvas(w, h);
+        c.getContext('2d').drawImage(bmp, Math.round(r.x * k), Math.round(r.y * k), w, h, 0, 0, w, h);
+        blob = await c.convertToBlob({ type: 'image/png' });
+      } else blob = shot;
     } else {
       const vh = Math.max(1, prep.vh);
       // cap the height so a very long page cannot exhaust memory
@@ -146,10 +184,10 @@ async function capture(tab, mode) {
       const canvas = new OffscreenCanvas(slices[0].bmp.width, Math.min(32000, Math.round(maxH * scale)));
       const g = canvas.getContext('2d');
       for (const s of slices) g.drawImage(s.bmp, 0, Math.round(s.y * scale));
-      url = await blobToDataUrl(await canvas.convertToBlob({ type: 'image/png' }));
+      blob = await canvas.convertToBlob({ type: 'image/png' });
     }
-    await chrome.downloads.download({ url, filename: `Handmark/handmark-${mode === 'full' ? 'fullpage' : 'visible'}-${stamp()}.png`, saveAs: false });
-    return { ok: true };
+    if (prep) { await chrome.tabs.sendMessage(tab.id, { type: 'hm:capture-end' }).catch(() => {}); prep = null; }
+    return await deliver(tab, 'image', blob, mode, opts.direct);
   } catch (e) {
     const m = String(e && e.message || e);
     if (/permission|activeTab|all_urls/i.test(m)) return { error: 'Click the Handmark icon on this tab first, then take the screenshot.' };
@@ -159,6 +197,70 @@ async function capture(tab, mode) {
     capturing = false;
   }
 }
+
+// ---------- recording an area of the tab ----------
+// The tab is captured with chrome.tabCapture; an offscreen document crops each frame to the
+// chosen area and encodes it. The page shows a frame around the area (outside it, so it is not
+// recorded) and a Stop button. The finished video opens in the editor.
+const OFFSCREEN = 'offscreen.html';
+async function offscreenOpen() {
+  const c = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] }).catch(() => []);
+  return c.length > 0;
+}
+async function recState() {
+  const { rec } = await chrome.storage.session.get('rec');
+  if (rec && !(await offscreenOpen())) { await chrome.storage.session.remove('rec'); return { recording: false }; }
+  return rec ? { recording: true, tabId: rec.tabId, started: rec.started } : { recording: false };
+}
+async function announceRec() {
+  const st = await recState();
+  chrome.runtime.sendMessage({ type: 'hm:rec-state', ...st }).catch(() => {});
+  return st;
+}
+async function recordStart(tab, rect, view) {
+  if (await offscreenOpen()) return { error: 'Already recording. Stop the current recording first.' };
+  const vw = Number(view && view.vw), vh = Number(view && view.vh), dpr = Number(view && view.dpr);
+  if (![vw, vh, dpr].every((v) => Number.isFinite(v) && v > 0 && v < 20000)) return { error: 'Could not read the page size' };
+  const r = cleanRect(rect, vw, vh);
+  if (!r) return { error: 'Select a larger area' };
+  let streamId;
+  try { streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id }); }
+  catch (e) { return { error: 'Chrome did not allow recording this tab. Click the Handmark icon on it, then try again.' }; }
+  try {
+    await chrome.offscreen.createDocument({ url: OFFSCREEN, reasons: ['USER_MEDIA'], justification: 'Record the area of the tab you selected' });
+    const res = await chrome.runtime.sendMessage({ type: 'hm:off-start', streamId, rect: r, view: { vw, vh, dpr: Math.min(3, dpr) }, title: tab.title || '', url: tab.url || '' });
+    if (!res || res.error) throw new Error(res ? res.error : 'no answer');
+  } catch (e) {
+    await chrome.offscreen.closeDocument().catch(() => {});
+    return { error: 'Could not start recording: ' + String(e && e.message || e).slice(0, 120) };
+  }
+  await chrome.storage.session.set({ rec: { tabId: tab.id, started: Date.now(), title: tab.title || '', url: tab.url || '' } });
+  announceRec();
+  return { ok: true, rect: r };
+}
+async function recordStop() {
+  if (!(await offscreenOpen())) { await chrome.storage.session.remove('rec'); announceRec(); return { error: 'Not recording' }; }
+  await chrome.runtime.sendMessage({ type: 'hm:off-stop' }).catch(() => {});
+  return { ok: true };
+}
+async function recordDone(msg) {
+  const { rec } = await chrome.storage.session.get('rec');
+  await chrome.storage.session.remove('rec');
+  await chrome.offscreen.closeDocument().catch(() => {});
+  const tabId = rec ? rec.tabId : null;
+  let tab = null;
+  if (Number.isInteger(tabId)) { tab = await chrome.tabs.get(tabId).catch(() => null); chrome.tabs.sendMessage(tabId, { type: 'hm:rec-ended' }).catch(() => {}); }
+  announceRec();
+  if (typeof msg.id !== 'string' || !(await HMMedia.get(msg.id))) return;
+  const where = { url: chrome.runtime.getURL('editor.html#' + msg.id) };
+  if (tab) { where.index = tab.index + 1; where.openerTabId = tab.id; where.windowId = tab.windowId; }
+  await chrome.tabs.create(where);
+}
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const { rec } = await chrome.storage.session.get('rec');
+  if (rec && rec.tabId === tabId) recordStop();
+});
+HMMedia.prune().catch(() => {});
 
 // ---------- font bytes for note text ----------
 let fontCache = null;
@@ -234,14 +336,32 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       case 'hm:font':
         return sender.tab ? fontFaces() : null;
       case 'hm:capture': {
-        const mode = msg.mode === 'full' ? 'full' : 'visible';
+        const mode = ['full', 'area'].includes(msg.mode) ? msg.mode : 'visible';
         if (tooSoon(sender, 'capture', 2000)) return { error: 'Wait a moment before the next screenshot' };
-        // from a page: only that page, and only while it is the visible tab
-        if (sender.tab) { const t = await activeTabById(sender.tab.id); return t ? capture(t, mode) : { error: 'Switch to the tab first' }; }
-        if (!isExtensionPage(sender)) return null;
+        // from a page: only that page, and only while it is the visible tab. An area is always chosen on the page.
+        if (sender.tab) { const t = await activeTabById(sender.tab.id); return t ? capture(t, mode, { rect: msg.rect }) : { error: 'Switch to the tab first' }; }
+        if (!isExtensionPage(sender) || mode === 'area') return null;
         const t = await activeTabById(msg.tabId);
         return t ? capture(t, mode) : { error: 'No active tab' };
       }
+      case 'hm:record-start': {
+        if (!sender.tab || tooSoon(sender, 'record', 2000)) return { error: 'Wait a moment and try again' };
+        const t = await activeTabById(sender.tab.id);
+        return t ? recordStart(t, msg.rect, msg.view) : { error: 'Switch to the tab first' };
+      }
+      case 'hm:record-stop': {
+        const st = await recState();
+        if (sender.tab && st.tabId !== sender.tab.id) return null;
+        if (!sender.tab && !isExtensionPage(sender)) return null;
+        return recordStop();
+      }
+      case 'hm:rec-state':
+        return recState();
+      case 'hm:rec-done':
+        // only the recorder page may report a finished recording (web pages cannot open extension pages)
+        if (typeof sender.url !== 'string' || !sender.url.startsWith(chrome.runtime.getURL(OFFSCREEN))) return null;
+        await recordDone(msg);
+        return { ok: true };
       case 'hm:start': {
         if (!isExtensionPage(sender)) return null;
         const t = await activeTabById(msg.tabId);
